@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/assets/sushi_logo_without_bg.png",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
