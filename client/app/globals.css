@@ -67,7 +67,7 @@
   --destructive: #f23f43; /* Discord official red */
   --border: rgba(255, 255, 255, 0.04);
   --input: #1e1f22;
-  --ring: rgba(88, 101, 242, 0.4);
+  --ring: rgba(255, 90, 54, 0.35); /* Sushi orange focus ring */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -76,12 +76,12 @@
   --radius: 0.5rem;
   --sidebar: #2b2d31; /* Discord channel sidebar gray */
   --sidebar-foreground: #dbdee1;
-  --sidebar-primary: #5865f2;
+  --sidebar-primary: #FF5A36; /* Sushi orange — replaces Discord blurple */
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #35373c;
   --sidebar-accent-foreground: #dbdee1;
   --sidebar-border: rgba(255, 255, 255, 0.03);
-  --sidebar-ring: rgba(88, 101, 242, 0.25);
+  --sidebar-ring: rgba(255, 90, 54, 0.25); /* Sushi orange */
 }
 
 .dark {
@@ -102,7 +102,7 @@
   --destructive: #f23f43;
   --border: rgba(255, 255, 255, 0.04);
   --input: #1e1f22;
-  --ring: rgba(88, 101, 242, 0.4);
+  --ring: rgba(255, 90, 54, 0.35);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -110,12 +110,12 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: #2b2d31;
   --sidebar-foreground: #dbdee1;
-  --sidebar-primary: #5865f2;
+  --sidebar-primary: #FF5A36;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #35373c;
   --sidebar-accent-foreground: #dbdee1;
   --sidebar-border: rgba(255, 255, 255, 0.03);
-  --sidebar-ring: rgba(88, 101, 242, 0.25);
+  --sidebar-ring: rgba(255, 90, 54, 0.25);
 }
 
 @utility glass-panel {

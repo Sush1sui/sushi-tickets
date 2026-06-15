@@ -129,7 +129,7 @@ export default function ServerLayout({
 									</p>
 								</div>
 								{isActive && (
-									<div className="ml-auto h-2 w-2 rounded-full bg-[#FF5A36] shadow-[0_0_8px_#FF5A36] shrink-0" />
+									<div className="ml-auto h-1.5 w-1.5 rounded-full bg-[#FF5A36]/90 shadow-[0_0_6px_rgba(255,90,54,0.6)] shrink-0" />
 								)}
 							</Link>
 						);
