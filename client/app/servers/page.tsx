@@ -8,7 +8,7 @@ import LoadingScreen from "../../components/LoadingScreen";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { ServerSummary } from "../../lib/api";
-import { ChevronRight, ServerCrash, Settings } from "lucide-react";
+import { ChevronRight, ServerCrash, Settings, UserPlus } from "lucide-react";
 
 function ServerCard({ server }: { server: ServerSummary }) {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function ServersPage() {
 
   const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
   const inviteUrl = clientId
-    ? `https://discord.com/oauth2/authorize?client_id=${clientId}`
+    ? `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot%20applications.commands`
     : "https://discord.com/oauth2/authorize";
 
   if (authLoading || isLoading) {
@@ -91,13 +91,26 @@ export default function ServersPage() {
         {/* Page Content */}
         <main className="flex-1">
           {/* Page Title */}
-          <div className="mb-10">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight uppercase text-glow-sushi/10">
-              Your Servers
-            </h1>
-            <p className="text-zinc-400 text-sm mt-2 font-medium">
-              Select a server to manage its ticket settings.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight uppercase text-glow-sushi/10">
+                Your Servers
+              </h1>
+              <p className="text-zinc-400 text-sm mt-2 font-medium">
+                Select a server to manage its ticket settings.
+              </p>
+            </div>
+            {servers.length > 0 && (
+              <a
+                href={inviteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-start sm:self-center flex items-center gap-2 rounded-xl bg-[#FF5A36] px-4.5 py-2.5 text-xs font-bold text-white hover:bg-[#FF6B4A] shadow-md shadow-orange-950/15 hover:shadow-[#FF5A36]/20 transition-all duration-200 active:scale-95"
+              >
+                <UserPlus className="h-4 w-4" />
+                Invite Bot
+              </a>
+            )}
           </div>
 
           {/* Server Grid */}
