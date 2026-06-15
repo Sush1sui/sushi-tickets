@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sushi Tickets — Dashboard (`client/`)
 
-## Getting Started
+Next.js 16 frontend for the Sushi Tickets system.
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+This is the administrative dashboard for Sushi Tickets. It communicates directly with the `bot_v2` Go API — there is no separate backend here. Auth is handled entirely by the Go server via Discord OAuth and session cookies.
+
+## Tech Stack
+
+- **Next.js 16** (App Router)
+- **React 19**
+- **TypeScript 5**
+- **Tailwind CSS v4**
+- **Shadcn UI** / Radix UI
+- **SWR** — data fetching and caching
+- **Lucide React** — icons
+
+## Environment Variables
+
+Copy `.env.example` to `.env`:
+
+```env
+# URL of the bot_v2 API server
+NEXT_PUBLIC_API_BASE=http://localhost:8080
+
+# Discord Client ID (for server invite link generation)
+NEXT_PUBLIC_DISCORD_CLIENT_ID=your_discord_client_id
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Production Build
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- All API calls use `credentials: "include"` so the session cookie is forwarded to the Go API.
+- Auth state comes from `GET /api/auth/me` — returns 401 if not logged in.
+- No NextAuth, no JWT parsing on the client side.
 
-## Deploy on Vercel
+## Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/
+├── page.tsx              # Home: server list (or login prompt if unauthenticated)
+├── layout.tsx            # Root layout
+└── servers/
+    └── [serverId]/
+        ├── layout.tsx    # Sidebar + server context
+        ├── page.tsx      # Server overview
+        ├── panels/       # Panel management
+        ├── multi-panels/ # Multi-panel management
+        ├── staffs/       # Staff role configuration
+        └── transcripts/  # Transcript viewer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+components/               # Shadcn + custom components
+lib/                      # API helpers, types, utilities
+```

@@ -1,12 +1,13 @@
-# 🏗️ Architecture Documentation
+# 🏗️ Architecture — Sushi Tickets
 
 ## System Overview
 
-FNS Tickets is a distributed system consisting of three main components:
+Sushi Tickets is a two-component system:
 
-1. **Discord Bot (Go)** - Handles Discord interactions and business logic
-2. **Dashboard (Next.js)** - Provides administrative interface and APIs
-3. **MongoDB** - Centralized data store for both bot and dashboard
+1. **`bot_v2/`** — Go binary running the Discord bot and HTTP API server concurrently
+2. **`client/`** — Next.js dashboard that calls the Go API
+
+Both share the same **PostgreSQL** database (Neon). Transcripts are stored in **Azure Blob Storage**. Everything is served via **Caddy** reverse proxy on a single Azure VM.
 
 ---
 
@@ -15,591 +16,272 @@ FNS Tickets is a distributed system consisting of three main components:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Discord Users                            │
-└────────────┬───────────────────────────────────┬────────────────┘
-             │                                   │
-             │ Button Clicks                     │ Web Browser
-             │ Message Events                    │
-             ▼                                   ▼
-┌─────────────────────────────┐  ┌──────────────────────────────┐
-│      Discord API            │  │   Dashboard (Next.js)        │
-│   (WebSocket Gateway)       │  │   - React 19 UI              │
-└────────────┬────────────────┘  │   - NextAuth OAuth           │
-             │                    │   - API Routes               │
-             │ Events             │   - Mongoose ORM             │
-             ▼                    └──────────┬───────────────────┘
-┌─────────────────────────────┐             │
-│   Go Discord Bot            │             │ HTTP API
-│   - DiscordGo Client        │◄────────────┤ (Panel Deploy)
-│   - Event Handlers          │             │
-│   - Button Interactions     │             │
-│   - Message Tracking        │             │
-│   - Auto-Close Worker       │             │
-│   - HTTP API Server         │             │
-└────────────┬────────────────┘             │
-             │                              │
-             │ MongoDB Driver               │ Mongoose
-             ▼                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       MongoDB Atlas                              │
-│   Collections: servers, panels, tickets, transcripts            │
-└─────────────────────────────────────────────────────────────────┘
+└────────────┬───────────────────────────┬────────────────────────┘
+             │ Button / Select / Modal    │ Web Browser
+             │ events via WebSocket       │
+             ▼                            ▼
+┌─────────────────────┐      ┌────────────────────────────────────┐
+│   Discord API        │      │         Caddy (TLS + proxy)        │
+│   (WebSocket GW)     │      │   /api/* → localhost:8080          │
+└──────────┬──────────┘      │   /*     → localhost:3000          │
+           │                  └───────────┬────────────────────────┘
+           │ DiscordGo                    │
+           ▼                              │
+┌─────────────────────────────────────┐  │
+│          bot_v2 (Go binary)         │  │
+│                                     │  │
+│  ┌─────────────┐  ┌──────────────┐ │  │
+│  │  Discord    │  │  HTTP API    │◄├──┘
+│  │  Bot        │  │  Server      │ │
+│  │  (DiscordGo)│  │  (net/http)  │ │
+│  └──────┬──────┘  └──────┬───────┘ │
+│         │                │          │
+│         └────────┬───────┘          │
+│                  │                  │
+│         ┌────────▼───────┐          │
+│         │  db (sqlc)     │          │
+│         │  storage       │          │
+│         │  service       │          │
+│         └────────┬───────┘          │
+└──────────────────┼──────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+        ▼                     ▼
+┌──────────────┐    ┌─────────────────────┐
+│  PostgreSQL  │    │  Azure Blob Storage  │
+│  (Neon)      │    │  (transcripts)       │
+└──────────────┘    └─────────────────────┘
+
+┌─────────────────────────────────────────┐
+│         client/ (Next.js 16)            │
+│  ┌─────────────────┐  ┌──────────────┐  │
+│  │  Pages (RSC)    │  │  SWR hooks   │  │
+│  └─────────────────┘  └──────┬───────┘  │
+└─────────────────────────────-┼──────────┘
+                                │ fetch (credentials: include)
+                                └──► bot_v2 HTTP API
 ```
 
 ---
 
 ## Component Architecture
 
-### 1. Discord Bot (Go)
+### 1. Go Bot + API (`bot_v2/`)
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                         Bot Entry                          │
-│                    cmd/fns-tickets/                        │
-│                        main.go                             │
-└─────────────────┬──────────────────────────────────────────┘
-                  │
-                  ├─► HTTP Server (Port 7694)
-                  ├─► Discord Session
-                  ├─► Auto-Close Worker (Background)
-                  └─► Ping Server Loop (Background)
-
-┌─────────────────────────────────────────────────────────────┐
-│                      Bot Core Logic                         │
-│                    internal/bot/                            │
-├─────────────────────────────────────────────────────────────┤
-│  bot.go           - Session initialization                  │
-│  autoclose.go     - Background ticker for inactive tickets  │
-│  ratelimit.go     - Discord API rate limit handler          │
-│                                                             │
-│  commands/        - Slash command handlers                  │
-│  events/          - Event handlers                          │
-│    ├─ buttonInteraction.go  - Open/close ticket logic      │
-│    └─ messageTracking.go    - Track messages for transcripts│
-│  deploy/          - Register commands and events            │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                    Repository Layer                         │
-│                  internal/repository/                       │
-├─────────────────────────────────────────────────────────────┤
-│  guild.go         - Server config CRUD                      │
-│  user_tickets.go  - Ticket CRUD operations                  │
-│  transcripts.go   - Transcript CRUD operations              │
-│  indexes.go       - Database index management               │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                      HTTP API Server                        │
-│                   internal/server/                          │
-├─────────────────────────────────────────────────────────────┤
-│  routes/          - Route registration                      │
-│  handlers/        - API endpoint handlers                   │
-│    ├─ sendPanel.go       - Deploy single panel             │
-│    ├─ sendMultiPanel.go  - Deploy multi-panel              │
-│    ├─ servers.go         - Fetch server data               │
-│    ├─ channels.go        - Fetch channels                  │
-│    ├─ roles.go           - Fetch roles                     │
-│    ├─ categories.go      - Fetch categories                │
-│    ├─ emojis.go          - Fetch custom emojis             │
-│    └─ members.go         - Fetch server members            │
-└─────────────────────────────────────────────────────────────┘
+bot_v2/
+├── cmd/
+│   └── main.go              # Start bot + API server concurrently
+│
+├── internal/
+│   ├── api/                 # HTTP API server
+│   │   ├── router.go        # Route registration, middleware wrappers
+│   │   ├── handlers.go      # Health check, shared helpers
+│   │   ├── middleware.go    # CORS, rate limiting, auth, CSRF, idempotency
+│   │   ├── session_cleanup.go  # Background expired-session cleanup
+│   │   ├── auth/            # Discord OAuth handlers (login, callback, me, servers, logout)
+│   │   ├── panels/          # Panel + multi-panel CRUD, send-to-Discord
+│   │   ├── server-config/   # Guild config, meta (roles/channels/categories/emojis), staff
+│   │   └── transcripts/     # List transcripts, get metadata, get Blob content
+│   │
+│   ├── bot/                 # Discord bot
+│   │   ├── bot.go           # DiscordGo session setup
+│   │   ├── commands/        # Slash command handlers
+│   │   ├── events/          # Event handlers (messages, guild join/leave)
+│   │   ├── deploy/          # Command + event registration on startup
+│   │   └── tickets/         # Ticket open/close logic, welcome messages, Q&A modal
+│   │
+│   ├── config/              # .env loader (godotenv)
+│   ├── db/                  # sqlc-generated code
+│   │   ├── models.go        # Go structs from PostgreSQL schema
+│   │   ├── query.sql.go     # Generated query methods
+│   │   ├── panels.go        # Extended panel queries
+│   │   ├── active_tickets.go
+│   │   ├── auth_sessions.go
+│   │   ├── idempotency.go
+│   │   └── server_config_ext.go
+│   ├── service/             # Business logic (ticket operations, etc.)
+│   ├── storage/             # Azure Blob client wrapper
+│   └── utils/               # Shared helpers
+│
+├── sql/                     # SQL schema + query definitions (sqlc input)
+└── sqlc.yaml                # sqlc configuration
 ```
 
 #### Key Design Patterns
 
-**Repository Pattern**: Separates data access logic from business logic
+**sqlc (no ORM)**: SQL is written by hand in `sql/`, `sqlc` generates type-safe Go methods. No runtime query building — all queries are pre-compiled and type-checked.
 
-- Benefits: Testable, maintainable, swappable data sources
-- Location: `internal/repository/`
+**Single binary, two goroutines**: `main.go` starts the Discord bot session and the HTTP server concurrently. Both share the same `*db.Queries` and `*storage.Client` instances.
 
-**Event-Driven Architecture**: Bot responds to Discord events
+**Middleware chain**: All authenticated routes pass through `wrapAuthConfig` which validates the session cookie, checks server authorization (user must have Manage Guild on that server), rate limits, validates CSRF, and handles idempotency.
 
-- Events: Button clicks, message creates, guild joins
-- Location: `internal/bot/events/`
-
-**Background Workers**: Async processing for non-critical tasks
-
-- Auto-close worker: Checks inactive tickets every 5 minutes
-- Ping server: Keeps bot alive on free hosting
-- Location: `internal/bot/autoclose.go`, `internal/common/pingServer.go`
+**Idempotency**: POST/PUT/DELETE requests can send an `Idempotency-Key` header. The server stores responses and replays them for duplicate requests within a TTL window.
 
 ---
 
-### 2. Dashboard (Next.js)
+### 2. Dashboard (`client/`)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      App Router                             │
-│                    app/ directory                           │
-├─────────────────────────────────────────────────────────────┤
-│  layout.tsx       - Root layout with providers             │
-│  page.tsx         - Landing page                            │
-│                                                             │
-│  home/            - Public home page                        │
-│  dashboard/       - Protected routes (auth required)        │
-│    ├─ page.tsx                 - Server selector           │
-│    └─ guild/[guildId]/                                     │
-│         ├─ page.tsx            - Guild overview            │
-│         ├─ panels/             - Panel management          │
-│         ├─ settings/           - Server settings           │
-│         ├─ staff/              - Staff configuration       │
-│         └─ transcripts/        - Transcript viewer         │
-│                                                             │
-│  api/             - Backend API routes                      │
-│    ├─ auth/                    - NextAuth endpoints        │
-│    ├─ dashboard/guild/[guildId]/                           │
-│    │    ├─ panels/             - Panel CRUD                │
-│    │    ├─ transcripts/        - Transcript queries        │
-│    │    ├─ data/               - Server data               │
-│    │    └─ settings/           - Settings update           │
-│    └─ panels/[panelId]/        - Public panel API          │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                     Components                              │
-│                  components/                                │
-├─────────────────────────────────────────────────────────────┤
-│  ui/              - Reusable UI components                  │
-│    ├─ button.tsx                                           │
-│    ├─ dropdown-menu.tsx                                    │
-│    ├─ spinner.tsx                                          │
-│    ├─ toast.tsx           - Toast notifications            │
-│    └─ confirm-dialog.tsx  - Confirmation modals            │
-│                                                             │
-│  layout/          - Layout components                       │
-│    ├─ header.tsx          - Top navigation                 │
-│    ├─ footer.tsx          - Footer                         │
-│    └─ layout-shell.tsx    - Page wrapper                   │
-│                                                             │
-│  providers/       - React Context providers                 │
-│    ├─ query-provider.tsx  - React Query setup              │
-│    └─ session-provider.tsx - NextAuth wrapper              │
-│                                                             │
-│  emoji-picker.tsx - Custom emoji selector                   │
-│  guild-sidebar.tsx - Server navigation                      │
-│  server-card.tsx  - Server card component                   │
-│  mode-toggle.tsx  - Dark/light mode toggle                  │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                   State Management                          │
-│                    hooks/ & context/                        │
-├─────────────────────────────────────────────────────────────┤
-│  useGuildQueries.ts  - React Query hooks for server data   │
-│  useToast.ts         - Toast notification hook             │
-│  AuthContext.tsx     - Authentication context              │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                   Data Layer                                │
-│                   lib/ & models/                            │
-├─────────────────────────────────────────────────────────────┤
-│  auth.ts          - NextAuth configuration                  │
-│  db.ts            - MongoDB connection (cached)             │
-│  discord.ts       - Discord API helpers                     │
-│  utils.ts         - Utility functions                       │
-│  middleware.ts    - API middleware                          │
-│  rateLimit.ts     - Rate limiting logic                     │
-│  encryption.ts    - Crypto utilities                        │
-│                                                             │
-│  Panel.ts         - Panel Mongoose schema                   │
-│  Server.ts        - Server Mongoose schema                  │
-│  Transcript.ts    - Transcript Mongoose schema              │
-│  User.ts          - User Mongoose schema                    │
-└─────────────────────────────────────────────────────────────┘
+client/
+├── app/
+│   ├── layout.tsx           # Root layout
+│   ├── page.tsx             # Home: server list or login prompt
+│   ├── globals.css
+│   └── servers/
+│       └── [serverId]/
+│           ├── layout.tsx   # Sidebar + server context
+│           ├── page.tsx     # Server overview
+│           ├── panels/      # Panel list + create/edit
+│           ├── multi-panels/
+│           ├── staffs/
+│           └── transcripts/ # Transcript list + viewer
+│
+├── components/              # Shadcn/Radix UI components + custom
+└── lib/                     # API fetch helpers, types
 ```
 
 #### Key Design Patterns
 
-**Server Components**: Default for pages, client components marked with "use client"
+**SWR for data fetching**: All API calls use SWR for automatic caching, revalidation, and loading/error states. No separate state management library.
 
-- Benefits: Better performance, smaller bundles, SEO
-- Location: All `page.tsx` files
+**Credentials: include**: All fetches to the Go API send `credentials: "include"` so the session cookie is sent cross-origin.
 
-**React Query**: Server state management and caching
-
-- Benefits: Automatic refetching, optimistic updates, cache invalidation
-- Location: `hooks/useGuildQueries.ts`
-
-**Middleware Pattern**: Request interception and authentication
-
-- Location: `middleware.ts` (root level)
-
-**Repository Pattern (Mongoose Models)**: Data schemas and queries
-
-- Location: `models/`
+**No auth library**: Auth state comes from `GET /api/auth/me` — if it returns 401, user is not logged in. No NextAuth, no JWT parsing on the client side.
 
 ---
 
-### 3. Data Flow Patterns
-
-#### Ticket Creation Flow
+## Authentication Flow
 
 ```
-User clicks button in Discord
-    │
-    ▼
-Discord sends interaction event
-    │
-    ▼
-Bot receives event (buttonInteraction.go)
-    │
-    ├─► Validate user permissions
-    ├─► Check ticket limit
-    ├─► Fetch panel data from Next.js API
-    │       │
-    │       └─► HTTP GET /api/panels/{panelId}
-    │                │
-    │                └─► Next.js returns panel config
-    │
-    ├─► Create Discord channel with permissions
-    ├─► Save ticket to MongoDB (repository layer)
-    ├─► Create transcript (if enabled)
-    └─► Send welcome message with close button
-```
-
-#### Panel Deployment Flow
-
-```
-Admin creates panel in dashboard
-    │
-    ▼
-Dashboard saves panel to MongoDB
-    │
-    ▼
-Admin clicks "Send Panel"
-    │
-    ▼
-Dashboard sends HTTP request to bot
-    │
-    └─► POST http://localhost:7694/api/send-panel
-             │
-             ▼
-        Bot API receives request
-             │
-             ├─► Validate API key
-             ├─► Create Discord embed
-             ├─► Add button component
-             └─► Send to specified channel
-```
-
-#### Transcript Creation Flow
-
-```
-Ticket opened in Discord
-    │
-    ▼
-Bot checks if transcript channel configured
-    │
-    ├─► If no: Skip transcript
-    └─► If yes: Create empty transcript in MongoDB
-
-Messages sent in ticket channel
-    │
-    ▼
-Bot tracks each message (messageTracking.go)
-    │
-    └─► Add message to transcript with metadata
-
-Ticket closed
-    │
-    ▼
-Bot finalizes transcript
-    │
-    ├─► Fetch all remaining messages
-    ├─► Calculate metadata (participants, counts)
-    ├─► Save to MongoDB
-    └─► Send summary embed to transcript channel
-
-User views in dashboard
-    │
-    └─► Next.js fetches from MongoDB and renders
+1. User clicks "Login with Discord"
+        │
+        ▼
+2. Client redirects to:
+   GET /api/auth/login
+        │
+        ▼
+3. Bot API redirects to Discord OAuth URL
+   (with state parameter for CSRF)
+        │
+        ▼
+4. User authorizes on Discord
+        │
+        ▼
+5. Discord redirects to:
+   GET /api/auth/callback?code=...&state=...
+        │
+        ├─► Validate state
+        ├─► Exchange code for Discord access token
+        ├─► Fetch user profile from Discord
+        ├─► Encrypt token with AES (ACCESS_TOKEN_KEY)
+        ├─► Store session in PostgreSQL (auth_sessions table)
+        └─► Set HTTP-only session cookie → redirect to CLIENT_ORIGIN
+        │
+        ▼
+6. Subsequent requests:
+   Cookie sent automatically
+   Bot API decrypts, validates session
+   Attaches user context to request
 ```
 
 ---
 
-## Database Design
+## Ticket Flow
 
-### Schema Overview
+### Open Ticket
 
 ```
-MongoDB Cluster
-├─ Database: "test" (or production name)
-│   ├─ Collection: servers
-│   │   └─ Documents: Server configurations
-│   │       ├─ serverId (indexed)
-│   │       ├─ ticketConfig
-│   │       │   ├─ ticketNameStyle
-│   │       │   ├─ maxTicketsPerUser
-│   │       │   ├─ ticketTranscript (channel ID)
-│   │       │   ├─ ticketPermissions
-│   │       │   └─ autoClose settings
-│   │       └─ timestamps
-│   │
-│   ├─ Collection: panels
-│   │   └─ Documents: Ticket panel configurations
-│   │       ├─ guild (indexed)
-│   │       ├─ channel
-│   │       ├─ title, content, color
-│   │       ├─ button config
-│   │       ├─ welcomeEmbed
-│   │       └─ timestamps
-│   │
-│   ├─ Collection: tickets
-│   │   └─ Documents: Active and closed tickets
-│   │       ├─ guildId, channelId (indexed)
-│   │       ├─ userId, panelId
-│   │       ├─ createdAt, lastMessageAt
-│   │       ├─ closed (indexed)
-│   │       └─ compound indexes for queries
-│   │
-│   └─ Collection: transcripts
-│       └─ Documents: Full ticket conversations
-│           ├─ ticketId (indexed)
-│           ├─ guildId, channelId (indexed)
-│           ├─ userId, username
-│           ├─ messages[] (array of message objects)
-│           ├─ metadata (computed stats)
-│           └─ timestamps
+User clicks panel button in Discord
+        │
+        ▼
+DiscordGo receives interaction event
+        │
+        ├─► If panel has Q&A questions → show modal
+        │         User fills modal → submit
+        │
+        ├─► Check max tickets per user
+        ├─► Create Discord channel with role permissions
+        ├─► Save ticket to PostgreSQL
+        ├─► Create empty transcript record
+        └─► Send welcome embed with close button (+ Q&A answers as follow-up message)
 ```
 
-### Index Strategy
+### Close Ticket
 
-**Critical Indexes**:
+```
+Staff clicks close button
+        │
+        ├─► Fetch remaining messages from Discord
+        ├─► Write transcript content to Azure Blob Storage
+        ├─► Finalize transcript metadata in PostgreSQL
+        ├─► Send transcript summary embed to configured channel
+        └─► Archive/delete the ticket channel
+```
 
-- `servers.serverId` - Lookup by Discord server ID (unique)
-- `tickets.{guildId, userId, closed}` - Find user's active tickets
-- `tickets.channelId` - Lookup ticket by Discord channel
-- `transcripts.ticketId` - Fetch transcript for ticket
-- `panels.guild` - List panels for a server
+---
 
-**Query Optimization**:
+## Database Design (PostgreSQL)
 
-- Compound indexes for common query patterns
-- TTL indexes for automatic cleanup (future)
-- Covered queries where possible (projection matches index)
+Schema is defined in `bot_v2/sql/`. Key tables:
+
+| Table | Purpose |
+|-------|---------|
+| `server_configs` | Per-guild ticket config (max tickets, naming style, auto-close, transcript channel) |
+| `panels` | Ticket panel configurations (embed, button, welcome embed, questions) |
+| `multi_panels` | Multi-panel (select menu) configurations |
+| `active_tickets` | Open tickets (guild, channel, user, panel) |
+| `transcripts` | Transcript metadata (stored content in Azure Blob) |
+| `auth_sessions` | User sessions (Discord user ID, encrypted token, expiry) |
+| `idempotency_keys` | Idempotency store for mutation replay |
+
+All queries are type-safe via sqlc — no raw query strings at runtime.
 
 ---
 
 ## Security Architecture
 
-### Authentication & Authorization
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                  Authentication Flow                        │
-├─────────────────────────────────────────────────────────────┤
-│  User → Login Button                                        │
-│    │                                                         │
-│    ▼                                                         │
-│  Next.js → Redirect to Discord OAuth                        │
-│    │                                                         │
-│    ▼                                                         │
-│  Discord → User authorizes → Callback                       │
-│    │                                                         │
-│    ▼                                                         │
-│  NextAuth → Exchange code for token                         │
-│    │                                                         │
-│    ├─► Fetch user profile from Discord                     │
-│    ├─► Create/update user in database                      │
-│    └─► Issue JWT session cookie (HTTP-only, secure)        │
-│                                                             │
-│  Subsequent requests:                                       │
-│    └─► Session verified via JWT                            │
-│         └─► User data available in request context         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### API Security
-
-**Bot API**:
-
-- Bearer token authentication (`Authorization: Bearer {API_KEY}`)
-- API key stored in environment variables
-- No CORS (internal communication only)
-
-**Dashboard API**:
-
-- Session-based authentication via NextAuth
-- JWT tokens in HTTP-only cookies
-- CSRF protection via NextAuth
-- Rate limiting (future enhancement)
-
-### Data Security
-
-- **Encryption at Rest**: MongoDB Atlas default encryption
-- **Encryption in Transit**: TLS/SSL for all connections
-- **Secret Management**: Environment variables, never committed
-- **Input Validation**: Server-side validation for all inputs
-- **SQL Injection**: N/A (NoSQL database with parameterized queries)
-- **XSS Protection**: React auto-escapes by default
+| Concern | Implementation |
+|---------|---------------|
+| Session tokens | AES-GCM encrypted, stored in HTTP-only `SameSite=Lax` cookies |
+| CSRF | Validated on all state-mutating requests (POST/PUT/DELETE) |
+| Rate limiting | Per-IP on auth routes; per-user on authenticated routes |
+| Server authorization | Every request checks user has Manage Guild on the target server |
+| CORS | Allow-list via `CLIENT_ORIGIN` env var |
+| Trusted proxies | `TRUSTED_PROXIES` used for real IP detection behind Caddy |
+| Idempotency | Duplicate mutation protection with stored response replay |
+| Secret management | All secrets in `.env`, never committed |
 
 ---
 
-## Performance Considerations
-
-### Bot Performance
-
-**Connection Pooling**:
-
-```go
-MaxPoolSize: 20      // Max 20 connections
-MinPoolSize: 2       // Keep 2 warm
-MaxConnIdleTime: 30s // Close idle after 30s
-```
-
-**Rate Limiting**:
-
-- Automatic Discord API rate limit detection
-- Exponential backoff with retry
-- Max 3 retries before failing
-
-**Memory Optimization**:
-
-- Lightweight Go runtime (~50MB idle)
-- Efficient string handling
-- Lazy loading of large objects
-
-### Dashboard Performance
-
-**React Query Caching**:
-
-- Automatic background refetching
-- Stale-while-revalidate pattern
-- Cache invalidation on mutations
-
-**Code Splitting**:
-
-- Automatic with Next.js App Router
-- Dynamic imports for large components
-- Smaller initial bundle size
-
-**Database Query Optimization**:
-
-- Proper indexing for all queries
-- Projection to limit returned fields
-- Pagination for large datasets
-
----
-
-## Scalability
-
-### Current Capacity
-
-- **Small Servers** (< 1,000 users): Single bot instance, free MongoDB
-- **Medium Servers** (1,000-10,000 users): Single bot instance, paid MongoDB
-- **Large Servers** (> 10,000 users): Consider horizontal scaling
-
-### Scaling Strategy
-
-**Horizontal Scaling** (Future):
-
-- Multiple bot instances with load balancer
-- Discord sharding for large guilds
-- Redis for distributed caching
-- Message queue for async processing
-
-**Database Scaling**:
-
-- MongoDB replica sets for high availability
-- Read replicas for dashboard queries
-- Sharding by guild ID for very large deployments
-
-**Serverless Dashboard**:
-
-- Vercel automatically scales Next.js functions
-- Each API route is a separate serverless function
-- Cold start optimization with minimal imports
-
----
-
-## Deployment Architecture
-
-### Development
+## Deployment Architecture (Production)
 
 ```
-Local Machine
-├─ Bot (localhost:7694)
-├─ Dashboard (localhost:3000)
-└─ MongoDB (Atlas M0 free tier)
-```
-
-### Production
-
-```
-Cloud Infrastructure
-├─ Bot
-│   ├─ Railway / Fly.io / Docker
-│   ├─ Environment variables injected
-│   └─ Always-on process
+Azure VM (Linux)
 │
-├─ Dashboard
-│   ├─ Vercel (recommended)
-│   ├─ Serverless functions
-│   └─ Edge network CDN
+├── Caddy (reverse proxy + automatic TLS)
+│   ├── /api/* → 127.0.0.1:8080  (bot_v2)
+│   └── /*     → 127.0.0.1:3000  (client Next.js)
 │
-└─ Database
-    ├─ MongoDB Atlas (M2/M5/M10)
-    ├─ Replica sets
-    └─ Automatic backups
+├── systemd: fns-api.service     → bot_v2 binary
+└── systemd: client.service      → npm start (Next.js)
+
+External:
+├── Neon (PostgreSQL, serverless)
+└── Azure Blob Storage (transcripts)
 ```
 
----
-
-## Monitoring & Observability
-
-### Logging
-
-**Bot Logging**:
-
-```go
-log.Printf("Info: %s", message)      // Info level
-log.Printf("Error: %v", err)         // Error level
-log.Printf("DEBUG: %+v", struct)     // Debug level
-```
-
-**Dashboard Logging**:
-
-```typescript
-console.log("Info:", data); // Development only
-console.error("Error:", error); // Production safe
-```
-
-### Metrics to Monitor
-
-- **Bot**: Goroutine count, memory usage, API latency
-- **Dashboard**: API response times, error rates, user sessions
-- **Database**: Connection pool utilization, query times, document counts
-
-### Health Checks
-
-```
-Bot:      /health or ping endpoint (future)
-Dashboard: /api/health (future)
-Database: MongoDB Atlas monitoring
-```
-
----
-
-## Future Architecture Improvements
-
-### Planned Enhancements
-
-1. **Microservices**: Split bot into smaller services (commands, events, workers)
-2. **Message Queue**: Use Redis or RabbitMQ for async tasks
-3. **CDN**: Serve static assets from edge locations
-4. **Caching Layer**: Redis for session and query caching
-5. **Analytics Pipeline**: Track metrics and user behavior
-6. **WebSocket**: Real-time dashboard updates
-7. **GraphQL**: Unified API with better querying
-8. **Containerization**: Docker Compose for local dev
+See [docs/CADDYFILE_README.md](./docs/CADDYFILE_README.md) for Caddy config.
 
 ---
 
 ## References
 
-- [Go Best Practices](https://golang.org/doc/effective_go)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [MongoDB Schema Design](https://docs.mongodb.com/manual/core/data-modeling-introduction/)
-- [Discord API Documentation](https://discord.com/developers/docs)
-- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Go Documentation](https://golang.org/doc/)
+- [DiscordGo](https://github.com/bwmarrin/discordgo)
+- [sqlc Documentation](https://docs.sqlc.dev/)
+- [Next.js App Router](https://nextjs.org/docs/app)
+- [SWR Documentation](https://swr.vercel.app/)
+- [Azure Blob Storage SDK for Go](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/storage/azblob)
+- [Caddy Documentation](https://caddyserver.com/docs/)
