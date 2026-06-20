@@ -369,9 +369,8 @@ func editEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message
 	_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message})
 }
 
-func extractModalAnswers(data discordgo.ModalSubmitInteractionData) ([]string, []string) {
-	questions := make([]string, 0, 5)
-	answers := make([]string, 0, 5)
+func extractModalAnswersMap(data discordgo.ModalSubmitInteractionData) map[int]string {
+	answers := make(map[int]string)
 
 	for _, row := range data.Components {
 		var rowComponents []discordgo.MessageComponent
@@ -393,12 +392,14 @@ func extractModalAnswers(data discordgo.ModalSubmitInteractionData) ([]string, [
 			default:
 				continue
 			}
-			questions = append(questions, input.Label)
-			answers = append(answers, input.Value)
+			var idx int
+			if _, err := fmt.Sscanf(input.CustomID, "q_%d", &idx); err == nil {
+				answers[idx] = input.Value
+			}
 		}
 	}
 
-	return questions, answers
+	return answers
 }
 
 func SendTranscriptLog(

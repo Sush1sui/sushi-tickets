@@ -47,23 +47,28 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	data := i.ModalSubmitData()
-	if !strings.HasPrefix(data.CustomID, panelModalPrefix) {
-		return
-	}
-
 	panelID, ok := parsePanelID(data.CustomID, panelModalPrefix)
 	if !ok {
 		return
 	}
 
-	questions, answers := extractModalAnswers(data)
-	qna := make([]QnA, 0, len(questions))
-	for idx, q := range questions {
-		ans := ""
-		if idx < len(answers) {
-			ans = answers[idx]
-		}
+	dbQuestions, _, err := loadPanelQuestions(int32(panelID))
+	if err != nil {
+		log.Printf("failed to load questions for modal submit: %v", err)
+	}
+
+	answersMap := extractModalAnswersMap(data)
+	qna := make([]QnA, 0, len(dbQuestions))
+	for idx, q := range dbQuestions {
+		ans := answersMap[idx]
 		qna = append(qna, QnA{Question: q, Answer: ans})
+	}
+
+	// Fallback if DB questions list is empty but modal has answers
+	if len(qna) == 0 && len(answersMap) > 0 {
+		for idx, ans := range answersMap {
+			qna = append(qna, QnA{Question: fmt.Sprintf("Question %d", idx+1), Answer: ans})
+		}
 	}
 
 	respondDeferred(s, i)
