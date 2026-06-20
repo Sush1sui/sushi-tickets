@@ -29,11 +29,20 @@ import {
 import { Save, Plus, Trash2, Trash } from "lucide-react";
 
 const buttonColorOptions = [
-	{ value: "blue", label: "🔵  Blue" },
-	{ value: "green", label: "🟢  Green" },
-	{ value: "red", label: "🔴  Red" },
-	{ value: "gray", label: "⚫  Gray" },
+	{ value: "primary", label: "🔵  Blue" },
+	{ value: "success", label: "🟢  Green" },
+	{ value: "danger", label: "🔴  Red" },
+	{ value: "secondary", label: "⚫  Gray" },
 ];
+
+const normalizeButtonColor = (color?: string): string => {
+	if (!color) return "primary";
+	if (color === "blue") return "primary";
+	if (color === "green") return "success";
+	if (color === "red") return "danger";
+	if (color === "gray") return "secondary";
+	return color;
+};
 
 type PanelForm = {
 	mentionRoles: string[];
@@ -121,7 +130,7 @@ export default function EditPanelPage() {
 		},
 		color: "#FF5A36",
 		channelId: "",
-		buttonColor: "blue",
+		buttonColor: "primary",
 		buttonText: "Open Ticket",
 		emoji: "",
 		customEmoji: false,
@@ -180,7 +189,7 @@ export default function EditPanelPage() {
 			},
 			color: toHex(panel.embedColor ?? 0, "#FF5A36"),
 			channelId: panel.channelId ?? "",
-			buttonColor: panel.btnColor ?? "blue",
+			buttonColor: normalizeButtonColor(panel.btnColor),
 			buttonText: panel.btnTxt ?? "Open Ticket",
 			emoji: parsedEmoji.useCustom ? "" : parsedEmoji.emoji,
 			customEmoji: parsedEmoji.useCustom,
@@ -716,7 +725,7 @@ export default function EditPanelPage() {
 										{
 											label: form.buttonText || "Open Ticket",
 											emoji: form.customEmoji ? customEmojiUrl : form.emoji || undefined,
-											style: form.buttonColor === "blue" ? "primary" : form.buttonColor === "green" ? "success" : form.buttonColor === "red" ? "danger" : "secondary"
+											style: form.buttonColor as "primary" | "secondary" | "success" | "danger"
 										}
 									]}
 								/>

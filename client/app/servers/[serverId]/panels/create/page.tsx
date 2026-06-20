@@ -18,10 +18,10 @@ import {
 import { Save, Plus, Trash2 } from "lucide-react";
 
 const buttonColorOptions = [
-	{ value: "blue", label: "🔵  Blue" },
-	{ value: "green", label: "🟢  Green" },
-	{ value: "red", label: "🔴  Red" },
-	{ value: "gray", label: "⚫  Gray" },
+	{ value: "primary", label: "🔵  Blue" },
+	{ value: "success", label: "🟢  Green" },
+	{ value: "danger", label: "🔴  Red" },
+	{ value: "secondary", label: "⚫  Gray" },
 ];
 
 type PanelForm = {
@@ -75,7 +75,7 @@ export default function CreatePanelPage() {
 		},
 		color: "#FF5A36",
 		channelId: "",
-		buttonColor: "blue",
+		buttonColor: "primary",
 		buttonText: "Open Ticket",
 		emoji: "",
 		customEmoji: false,
@@ -593,7 +593,7 @@ export default function CreatePanelPage() {
 									{
 										label: form.buttonText || "Open Ticket",
 										emoji: form.customEmoji ? customEmojiUrl : form.emoji || undefined,
-										style: form.buttonColor === "blue" ? "primary" : form.buttonColor === "green" ? "success" : form.buttonColor === "red" ? "danger" : "secondary"
+										style: form.buttonColor as "primary" | "secondary" | "success" | "danger"
 									}
 								]}
 							/>
