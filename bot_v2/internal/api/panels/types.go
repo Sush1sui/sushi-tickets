@@ -2,6 +2,12 @@ package panels
 
 import "github.com/Sush1sui/FNS_BOT/internal/db"
 
+// QuestionItem represents a single panel question with an optional required flag.
+type QuestionItem struct {
+	Label      string `json:"label"`
+	IsRequired bool   `json:"isRequired"`
+}
+
 type Handler struct {
 	DB *db.Queries
 }
@@ -18,7 +24,7 @@ type PanelPayload struct {
 	BtnEmoji           string                `json:"btnEmoji"`
 	LargeImgUrl        string                `json:"largeImgUrl"`
 	SmallImgUrl        string                `json:"smallImgUrl"`
-	Questions          []string              `json:"questions"`
+	Questions          []QuestionItem        `json:"questions"`
 	WelcomeMessage     WelcomeMessagePayload `json:"welcomeMessage"`
 }
 
@@ -58,7 +64,7 @@ type PanelDetail struct {
 	BtnEmoji           string                 `json:"btnEmoji"`
 	LargeImgUrl        string                 `json:"largeImgUrl"`
 	SmallImgUrl        string                 `json:"smallImgUrl"`
-	Questions          []string               `json:"questions"`
+	Questions          []QuestionItem         `json:"questions"`
 	WelcomeMessage     *WelcomeMessagePayload `json:"welcomeMessage"`
 }
 

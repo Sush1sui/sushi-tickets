@@ -44,7 +44,7 @@ func validatePanelPayload(p PanelPayload) utils.ValidationErrors {
 		errs["questions"] = "max 10 questions allowed"
 	}
 	for i, q := range p.Questions {
-		utils.ValidateMaxLength(q, "questions["+strconv.Itoa(i)+"]", 256, errs)
+		utils.ValidateMaxLength(q.Label, "questions["+strconv.Itoa(i)+"].label", 256, errs)
 	}
 	utils.ValidateMaxLength(p.WelcomeMessage.Title, "welcomeMessage.title", 256, errs)
 	utils.ValidateMaxLength(p.WelcomeMessage.Description, "welcomeMessage.description", 4000, errs)
@@ -125,6 +125,16 @@ func (h *Handler) HandleGetPanel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Map PanelQuestionsRow to []QuestionItem
+	questionItems := make([]QuestionItem, len(questions.Questions))
+	for i, label := range questions.Questions {
+		req := false
+		if i < len(questions.RequiredFlags) {
+			req = questions.RequiredFlags[i]
+		}
+		questionItems[i] = QuestionItem{Label: label, IsRequired: req}
+	}
+
 	welcome, hasWelcome, err := h.DB.GetPanelWelcome(context.Background(), panelID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load welcome message"})
@@ -157,7 +167,7 @@ func (h *Handler) HandleGetPanel(w http.ResponseWriter, r *http.Request) {
 		BtnEmoji:           utils.TextOrEmpty(item.BtnEmoji),
 		LargeImgUrl:        utils.TextOrEmpty(item.LargeImgUrl),
 		SmallImgUrl:        utils.TextOrEmpty(item.SmallImgUrl),
-		Questions:          questions,
+		Questions:          questionItems,
 		WelcomeMessage:     welcomePayload,
 	})
 }
@@ -221,7 +231,15 @@ func (h *Handler) HandleCreatePanel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create panel"})
 		return
 	}
-	if err := h.DB.ReplaceQuestionsConfig(context.Background(), item.ID, payload.Questions); err != nil {
+	qLabels := make([]string, 0, len(payload.Questions))
+	qFlags := make([]bool, 0, len(payload.Questions))
+	for _, q := range payload.Questions {
+		if q.Label != "" {
+			qLabels = append(qLabels, q.Label)
+			qFlags = append(qFlags, q.IsRequired)
+		}
+	}
+	if err := h.DB.ReplaceQuestionsConfig(context.Background(), item.ID, qLabels, qFlags); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save questions"})
 		return
 	}
@@ -290,7 +308,15 @@ func (h *Handler) HandleUpdatePanel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update panel"})
 		return
 	}
-	if err := h.DB.ReplaceQuestionsConfig(context.Background(), panelID, payload.Questions); err != nil {
+	uqLabels := make([]string, 0, len(payload.Questions))
+	uqFlags := make([]bool, 0, len(payload.Questions))
+	for _, q := range payload.Questions {
+		if q.Label != "" {
+			uqLabels = append(uqLabels, q.Label)
+			uqFlags = append(uqFlags, q.IsRequired)
+		}
+	}
+	if err := h.DB.ReplaceQuestionsConfig(context.Background(), panelID, uqLabels, uqFlags); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save questions"})
 		return
 	}

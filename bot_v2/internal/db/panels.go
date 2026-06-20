@@ -122,22 +122,27 @@ func (q *Queries) GetPanelButtonConfigsByIDs(ctx context.Context, serverConfigID
 	return items, nil
 }
 
+type PanelQuestionsRow struct {
+	Questions     []string
+	RequiredFlags []bool
+}
+
 const getQuestionsByPanel = `
-SELECT questions
+SELECT questions, required_flags
 FROM questions_config
 WHERE panel_config_id = $1
 `
 
-func (q *Queries) GetPanelQuestions(ctx context.Context, panelID int32) ([]string, error) {
-	var questions []string
-	err := q.db.QueryRow(ctx, getQuestionsByPanel, panelID).Scan(&questions)
+func (q *Queries) GetPanelQuestions(ctx context.Context, panelID int32) (PanelQuestionsRow, error) {
+	var row PanelQuestionsRow
+	err := q.db.QueryRow(ctx, getQuestionsByPanel, panelID).Scan(&row.Questions, &row.RequiredFlags)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return []string{}, nil
+			return PanelQuestionsRow{}, nil
 		}
-		return nil, err
+		return PanelQuestionsRow{}, err
 	}
-	return questions, nil
+	return row, nil
 }
 
 const getWelcomeByPanel = `
@@ -320,18 +325,25 @@ WHERE panel_config_id = $1
 `
 
 const createQuestionsConfig = `
-INSERT INTO questions_config (panel_config_id, questions)
-VALUES ($1, $2)
+INSERT INTO questions_config (panel_config_id, questions, required_flags)
+VALUES ($1, $2, $3)
 `
 
-func (q *Queries) ReplaceQuestionsConfig(ctx context.Context, panelID int32, questions []string) error {
+func (q *Queries) ReplaceQuestionsConfig(ctx context.Context, panelID int32, questions []string, requiredFlags []bool) error {
 	if _, err := q.db.Exec(ctx, deleteQuestionsByPanel, panelID); err != nil {
 		return err
 	}
 	if len(questions) == 0 {
 		return nil
 	}
-	_, err := q.db.Exec(ctx, createQuestionsConfig, panelID, questions)
+	// Ensure requiredFlags length matches questions; pad with false if shorter.
+	flags := make([]bool, len(questions))
+	for i := range flags {
+		if i < len(requiredFlags) {
+			flags[i] = requiredFlags[i]
+		}
+	}
+	_, err := q.db.Exec(ctx, createQuestionsConfig, panelID, questions, flags)
 	return err
 }
 

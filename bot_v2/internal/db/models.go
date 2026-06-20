@@ -61,6 +61,7 @@ type QuestionsConfig struct {
 	ID            int32
 	PanelConfigID int32
 	Questions     []string
+	RequiredFlags []bool
 }
 
 type ServerConfig struct {

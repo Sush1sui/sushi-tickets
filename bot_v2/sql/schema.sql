@@ -38,7 +38,8 @@ CREATE TABLE panel_config (
 CREATE TABLE questions_config (
     id SERIAL PRIMARY KEY,
     panel_config_id INTEGER NOT NULL REFERENCES panel_config(id) ON DELETE CASCADE,
-    questions TEXT[]
+    questions TEXT[],
+    required_flags BOOLEAN[] NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE welcome_msg_config (

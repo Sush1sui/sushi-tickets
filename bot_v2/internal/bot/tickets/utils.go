@@ -217,7 +217,7 @@ func canCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
 	return false
 }
 
-func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, questions []string) {
+func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, questions []string, required []bool) {
 	inputs := make([]discordgo.MessageComponent, 0, 5)
 	limit := len(questions)
 	if limit > 5 {
@@ -226,13 +226,17 @@ func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, pa
 
 	for idx := 0; idx < limit; idx++ {
 		q := questions[idx]
+		req := false
+		if idx < len(required) {
+			req = required[idx]
+		}
 		inputs = append(inputs, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.TextInput{
 					CustomID: fmt.Sprintf("q_%d", idx),
 					Label:    q,
 					Style:    discordgo.TextInputParagraph,
-					Required: false,
+					Required: req,
 				},
 			},
 		})
@@ -248,11 +252,15 @@ func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, pa
 	})
 }
 
-func loadPanelQuestions(panelID int32) ([]string, error) {
+func loadPanelQuestions(panelID int32) ([]string, []bool, error) {
 	if queries == nil {
-		return nil, fmt.Errorf("queries not set")
+		return nil, nil, fmt.Errorf("queries not set")
 	}
-	return queries.GetPanelQuestions(context.Background(), panelID)
+	row, err := queries.GetPanelQuestions(context.Background(), panelID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return row.Questions, row.RequiredFlags, nil
 }
 
 func parsePanelID(value, prefix string) (int32, bool) {
