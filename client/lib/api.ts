@@ -277,6 +277,11 @@ export type PanelConfig = {
   SmallImgUrl: { String: string; Valid: boolean };
 };
 
+export type QuestionItem = {
+  label: string;
+  isRequired: boolean;
+};
+
 export type CreatePanelPayload = {
   mentionRolesOnOpen: string[];
   categoryId: string;
@@ -289,7 +294,7 @@ export type CreatePanelPayload = {
   btnEmoji: string;
   largeImgUrl: string;
   smallImgUrl: string;
-  questions: string[];
+  questions: QuestionItem[];
   welcomeMessage: WelcomeMessagePayload;
 };
 
@@ -305,7 +310,7 @@ export type PanelDetail = {
   btnEmoji: string;
   largeImgUrl: string;
   smallImgUrl: string;
-  questions: string[];
+  questions: QuestionItem[];
   welcomeMessage: WelcomeMessagePayload | null;
 };
 

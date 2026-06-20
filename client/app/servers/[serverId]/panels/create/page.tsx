@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { api, type DiscordEmoji, type DiscordRole } from "../../../../../lib/api";
+import { api, type DiscordEmoji, type DiscordRole, type QuestionItem } from "../../../../../lib/api";
 import EmojiPicker from "@/components/emoji-picker";
 import DiscordMockup from "@/components/DiscordMockup";
 import { useGuildEmojis, useGuildMeta } from "../../../../../lib/hooks/useGuildMeta";
@@ -29,7 +29,7 @@ type PanelForm = {
 	categoryId: string;
 	title: string;
 	content: string;
-	questions: string[];
+	questions: QuestionItem[];
 	welcomeMessage: {
 		embedColor: string;
 		title: string;
@@ -62,7 +62,7 @@ export default function CreatePanelPage() {
 		categoryId: "",
 		title: "",
 		content: "",
-		questions: [""],
+		questions: [{ label: "", isRequired: false }],
 		welcomeMessage: {
 			embedColor: "#57f287",
 			title: "",
@@ -140,7 +140,7 @@ export default function CreatePanelPage() {
 				btnEmoji: emojiValue,
 				largeImgUrl: form.largeImageUrl,
 				smallImgUrl: form.smallImageUrl,
-				questions: form.questions.filter((q) => q.trim() !== ""),
+				questions: form.questions.filter((q) => q.label.trim() !== ""),
 				welcomeMessage: {
 					embedColor:
 						parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
@@ -356,7 +356,7 @@ export default function CreatePanelPage() {
 							<button
 								type="button"
 								onClick={() =>
-									setForm((p) => ({ ...p, questions: [...p.questions, ""] }))
+									setForm((p) => ({ ...p, questions: [...p.questions, { label: "", isRequired: false }] }))
 								}
 								className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm"
 							>
@@ -372,20 +372,37 @@ export default function CreatePanelPage() {
 										{index + 1}.
 									</span>
 									<DarkInput
-										value={question}
+										value={question.label}
 										onChange={(e) => {
 											const next = [...form.questions];
-											next[index] = e.target.value;
+											next[index] = { ...next[index], label: e.target.value };
 											setForm((p) => ({ ...p, questions: next }));
 										}}
 										placeholder={`Question ${index + 1} (e.g. Describe your issue...)`}
 										className="flex-1"
 									/>
+									{/* Required toggle */}
+									<button
+										type="button"
+										onClick={() => {
+											const next = [...form.questions];
+											next[index] = { ...next[index], isRequired: !next[index].isRequired };
+											setForm((p) => ({ ...p, questions: next }));
+										}}
+										title={question.isRequired ? "Mark as optional" : "Mark as required"}
+										className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+											question.isRequired
+												? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
+												: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
+										}`}
+									>
+										{question.isRequired ? "Required" : "Optional"}
+									</button>
 									<button
 										type="button"
 										onClick={() => {
 											const next = form.questions.filter((_, i) => i !== index);
-											setForm((p) => ({ ...p, questions: next.length ? next : [""] }));
+											setForm((p) => ({ ...p, questions: next.length ? next : [{ label: "", isRequired: false }] }));
 										}}
 										className="p-2.5 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all shrink-0 cursor-pointer"
 									>

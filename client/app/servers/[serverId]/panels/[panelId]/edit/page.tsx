@@ -9,6 +9,7 @@ import {
 	type DiscordEmoji,
 	type DiscordRole,
 	type PanelDetail,
+	type QuestionItem,
 } from "../../../../../../lib/api";
 import EmojiPicker from "@/components/emoji-picker";
 import DiscordMockup from "@/components/DiscordMockup";
@@ -39,7 +40,7 @@ type PanelForm = {
 	categoryId: string;
 	title: string;
 	content: string;
-	questions: string[];
+	questions: QuestionItem[];
 	welcomeMessage: {
 		embedColor: string;
 		title: string;
@@ -107,7 +108,7 @@ export default function EditPanelPage() {
 		categoryId: "",
 		title: "",
 		content: "",
-		questions: [""],
+		questions: [{ label: "", isRequired: false }],
 		welcomeMessage: {
 			embedColor: "#57f287",
 			title: "",
@@ -164,7 +165,9 @@ export default function EditPanelPage() {
 			categoryId: panel.categoryId ?? "",
 			title: panel.title ?? "",
 			content: panel.content ?? "",
-			questions: panel.questions?.length ? panel.questions : [""],
+			questions: panel.questions?.length
+				? panel.questions.map((q) => ({ label: q.label, isRequired: q.isRequired }))
+				: [{ label: "", isRequired: false }],
 			welcomeMessage: {
 				embedColor: toHex(welcome?.embedColor ?? 0, "#57f287"),
 				title: welcome?.title ?? "",
@@ -233,7 +236,7 @@ export default function EditPanelPage() {
 				btnEmoji: emojiValue,
 				largeImgUrl: form.largeImageUrl,
 				smallImgUrl: form.smallImageUrl,
-				questions: form.questions.filter((q) => q.trim() !== ""),
+				questions: form.questions.filter((q) => q.label.trim() !== ""),
 				welcomeMessage: {
 					embedColor:
 						parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
@@ -476,7 +479,7 @@ export default function EditPanelPage() {
 								<button
 									type="button"
 									onClick={() =>
-										setForm((p) => ({ ...p, questions: [...p.questions, ""] }))
+										setForm((p) => ({ ...p, questions: [...p.questions, { label: "", isRequired: false }] }))
 									}
 									className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all"
 								>
@@ -492,20 +495,37 @@ export default function EditPanelPage() {
 											{index + 1}.
 										</span>
 										<DarkInput
-											value={question}
+											value={question.label}
 											onChange={(e) => {
 												const next = [...form.questions];
-												next[index] = e.target.value;
+												next[index] = { ...next[index], label: e.target.value };
 												setForm((p) => ({ ...p, questions: next }));
 											}}
 											placeholder={`Question ${index + 1}...`}
 											className="flex-1"
 										/>
+										{/* Required toggle */}
+										<button
+											type="button"
+											onClick={() => {
+												const next = [...form.questions];
+												next[index] = { ...next[index], isRequired: !next[index].isRequired };
+												setForm((p) => ({ ...p, questions: next }));
+											}}
+											title={question.isRequired ? "Mark as optional" : "Mark as required"}
+											className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+												question.isRequired
+													? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
+													: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
+											}`}
+										>
+											{question.isRequired ? "Required" : "Optional"}
+										</button>
 										<button
 											type="button"
 											onClick={() => {
 												const next = form.questions.filter((_, i) => i !== index);
-												setForm((p) => ({ ...p, questions: next.length ? next : [""] }));
+												setForm((p) => ({ ...p, questions: next.length ? next : [{ label: "", isRequired: false }] }));
 											}}
 											className="p-2 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/60 transition-all"
 										>
