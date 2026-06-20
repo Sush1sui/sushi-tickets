@@ -100,28 +100,27 @@ func sendQnAMessage(s *discordgo.Session, channelID string, user *discordgo.User
 		return
 	}
 
-	fields := make([]*discordgo.MessageEmbedField, 0, len(qna))
-	for _, qa := range qna {
+	var sb strings.Builder
+	for i, qa := range qna {
 		ans := strings.TrimSpace(qa.Answer)
 		if ans == "" {
-			ans = "_No response provided_"
+			ans = "N/A"
 		}
-		const maxRunes = 1024
+		const maxRunes = 500
 		if len([]rune(ans)) > maxRunes {
 			r := []rune(ans)
 			ans = string(r[:maxRunes-1]) + "…"
 		}
-		fields = append(fields, &discordgo.MessageEmbedField{
-			Name:   qa.Question,
-			Value:  ans,
-			Inline: false,
-		})
+		sb.WriteString(fmt.Sprintf("**%s**: %s", qa.Question, ans))
+		if i < len(qna)-1 {
+			sb.WriteString("\n")
+		}
 	}
 
 	embed := &discordgo.MessageEmbed{
-		Title:  "📋 Ticket Responses",
-		Color:  color,
-		Fields: fields,
+		Title:       "📋 Ticket Responses",
+		Color:       color,
+		Description: sb.String(),
 	}
 
 	message := &discordgo.MessageSend{
