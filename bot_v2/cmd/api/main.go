@@ -41,6 +41,10 @@ func main() {
 	}
 	defer pool.Close()
 
+	keepaliveCtx, keepaliveCancel := context.WithCancel(context.Background())
+	defer keepaliveCancel()
+	db.StartKeepalive(keepaliveCtx, pool, getEnvDuration("PG_KEEPALIVE_INTERVAL", 5*time.Minute))
+
 	queries := db.New(pool)
 	tickets.SetQueries(queries)
 
