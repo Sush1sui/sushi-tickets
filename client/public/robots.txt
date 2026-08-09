@@ -1,0 +1,7 @@
+# Allow search crawlers on landing page, protect dashboard/server routes
+User-agent: *
+Allow: /
+Disallow: /servers/
+Disallow: /api/
+
+Sitemap: https://sushitickets.app/sitemap.xml

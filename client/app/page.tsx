@@ -114,7 +114,7 @@ export default function Home() {
                     {user.image ? (
                       <img
                         src={user.image}
-                        alt=""
+                        alt={user.name}
                         className="h-6 w-6 rounded-full border border-white/10 ring-1 ring-white/5"
                       />
                     ) : (
