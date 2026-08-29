@@ -39,7 +39,10 @@ CREATE TABLE questions_config (
     id SERIAL PRIMARY KEY,
     panel_config_id INTEGER NOT NULL REFERENCES panel_config(id) ON DELETE CASCADE,
     questions TEXT[],
-    required_flags BOOLEAN[] NOT NULL DEFAULT '{}'
+    required_flags BOOLEAN[] NOT NULL DEFAULT '{}',
+    styles TEXT[] NOT NULL DEFAULT '{}',
+    placeholders TEXT[] NOT NULL DEFAULT '{}',
+    modal_title TEXT NOT NULL DEFAULT 'Sushi Ticket Questions'
 );
 
 CREATE TABLE welcome_msg_config (

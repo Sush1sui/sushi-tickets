@@ -2,10 +2,12 @@ package panels
 
 import "github.com/Sush1sui/FNS_BOT/internal/db"
 
-// QuestionItem represents a single panel question with an optional required flag.
+// QuestionItem represents a single panel question with style, placeholder, and required flag.
 type QuestionItem struct {
-	Label      string `json:"label"`
-	IsRequired bool   `json:"isRequired"`
+	Label       string `json:"label"`
+	IsRequired  bool   `json:"isRequired"`
+	Style       string `json:"style,omitempty"`
+	Placeholder string `json:"placeholder,omitempty"`
 }
 
 type Handler struct {
@@ -13,19 +15,20 @@ type Handler struct {
 }
 
 type PanelPayload struct {
-	MentionRolesOnOpen []string              `json:"mentionRolesOnOpen"`
-	CategoryID         string                `json:"categoryId"`
-	Title              string                `json:"title"`
-	Content            string                `json:"content"`
-	EmbedColor         int32                 `json:"embedColor"`
-	ChannelID          string                `json:"channelId"`
-	BtnColor           string                `json:"btnColor"`
-	BtnTxt             string                `json:"btnTxt"`
-	BtnEmoji           string                `json:"btnEmoji"`
-	LargeImgUrl        string                `json:"largeImgUrl"`
-	SmallImgUrl        string                `json:"smallImgUrl"`
-	Questions          []QuestionItem        `json:"questions"`
-	WelcomeMessage     WelcomeMessagePayload `json:"welcomeMessage"`
+	MentionRolesOnOpen  []string              `json:"mentionRolesOnOpen"`
+	CategoryID          string                `json:"categoryId"`
+	Title               string                `json:"title"`
+	Content             string                `json:"content"`
+	EmbedColor          int32                 `json:"embedColor"`
+	ChannelID           string                `json:"channelId"`
+	BtnColor            string                `json:"btnColor"`
+	BtnTxt              string                `json:"btnTxt"`
+	BtnEmoji            string                `json:"btnEmoji"`
+	LargeImgUrl         string                `json:"largeImgUrl"`
+	SmallImgUrl         string                `json:"smallImgUrl"`
+	Questions           []QuestionItem        `json:"questions"`
+	QuestionsModalTitle string                `json:"questionsModalTitle,omitempty"`
+	WelcomeMessage      WelcomeMessagePayload `json:"welcomeMessage"`
 }
 
 type WelcomeMessagePayload struct {
@@ -53,19 +56,20 @@ type MultiPanelPayload struct {
 }
 
 type PanelDetail struct {
-	MentionRolesOnOpen []string               `json:"mentionRolesOnOpen"`
-	CategoryID         string                 `json:"categoryId"`
-	Title              string                 `json:"title"`
-	Content            string                 `json:"content"`
-	EmbedColor         int32                  `json:"embedColor"`
-	ChannelID          string                 `json:"channelId"`
-	BtnColor           string                 `json:"btnColor"`
-	BtnTxt             string                 `json:"btnTxt"`
-	BtnEmoji           string                 `json:"btnEmoji"`
-	LargeImgUrl        string                 `json:"largeImgUrl"`
-	SmallImgUrl        string                 `json:"smallImgUrl"`
-	Questions          []QuestionItem         `json:"questions"`
-	WelcomeMessage     *WelcomeMessagePayload `json:"welcomeMessage"`
+	MentionRolesOnOpen  []string               `json:"mentionRolesOnOpen"`
+	CategoryID          string                 `json:"categoryId"`
+	Title               string                 `json:"title"`
+	Content             string                 `json:"content"`
+	EmbedColor          int32                  `json:"embedColor"`
+	ChannelID           string                 `json:"channelId"`
+	BtnColor            string                 `json:"btnColor"`
+	BtnTxt              string                 `json:"btnTxt"`
+	BtnEmoji            string                 `json:"btnEmoji"`
+	LargeImgUrl         string                 `json:"largeImgUrl"`
+	SmallImgUrl         string                 `json:"smallImgUrl"`
+	Questions           []QuestionItem         `json:"questions"`
+	QuestionsModalTitle string                 `json:"questionsModalTitle"`
+	WelcomeMessage      *WelcomeMessagePayload `json:"welcomeMessage"`
 }
 
 type MultiPanelDetail struct {

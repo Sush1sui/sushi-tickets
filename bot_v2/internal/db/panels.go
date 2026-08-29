@@ -125,22 +125,28 @@ func (q *Queries) GetPanelButtonConfigsByIDs(ctx context.Context, serverConfigID
 type PanelQuestionsRow struct {
 	Questions     []string
 	RequiredFlags []bool
+	Styles        []string
+	Placeholders  []string
+	ModalTitle    string
 }
 
 const getQuestionsByPanel = `
-SELECT questions, required_flags
+SELECT questions, required_flags, styles, placeholders, modal_title
 FROM questions_config
 WHERE panel_config_id = $1
 `
 
 func (q *Queries) GetPanelQuestions(ctx context.Context, panelID int32) (PanelQuestionsRow, error) {
 	var row PanelQuestionsRow
-	err := q.db.QueryRow(ctx, getQuestionsByPanel, panelID).Scan(&row.Questions, &row.RequiredFlags)
+	err := q.db.QueryRow(ctx, getQuestionsByPanel, panelID).Scan(&row.Questions, &row.RequiredFlags, &row.Styles, &row.Placeholders, &row.ModalTitle)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return PanelQuestionsRow{}, nil
+			return PanelQuestionsRow{ModalTitle: "Sushi Ticket Questions"}, nil
 		}
 		return PanelQuestionsRow{}, err
+	}
+	if row.ModalTitle == "" {
+		row.ModalTitle = "Sushi Ticket Questions"
 	}
 	return row, nil
 }
@@ -325,25 +331,40 @@ WHERE panel_config_id = $1
 `
 
 const createQuestionsConfig = `
-INSERT INTO questions_config (panel_config_id, questions, required_flags)
-VALUES ($1, $2, $3)
+INSERT INTO questions_config (panel_config_id, questions, required_flags, styles, placeholders, modal_title)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
-func (q *Queries) ReplaceQuestionsConfig(ctx context.Context, panelID int32, questions []string, requiredFlags []bool) error {
+func (q *Queries) ReplaceQuestionsConfig(ctx context.Context, panelID int32, questions []string, requiredFlags []bool, styles []string, placeholders []string, modalTitle string) error {
 	if _, err := q.db.Exec(ctx, deleteQuestionsByPanel, panelID); err != nil {
 		return err
 	}
 	if len(questions) == 0 {
 		return nil
 	}
-	// Ensure requiredFlags length matches questions; pad with false if shorter.
+	if modalTitle == "" {
+		modalTitle = "Sushi Ticket Questions"
+	}
+	// Ensure slice lengths match questions count; pad with defaults if shorter.
 	flags := make([]bool, len(questions))
-	for i := range flags {
+	qStyles := make([]string, len(questions))
+	qPlaceholders := make([]string, len(questions))
+	for i := range questions {
 		if i < len(requiredFlags) {
 			flags[i] = requiredFlags[i]
 		}
+		if i < len(styles) && styles[i] != "" {
+			qStyles[i] = styles[i]
+		} else {
+			qStyles[i] = "short"
+		}
+		if i < len(placeholders) {
+			qPlaceholders[i] = placeholders[i]
+		} else {
+			qPlaceholders[i] = ""
+		}
 	}
-	_, err := q.db.Exec(ctx, createQuestionsConfig, panelID, questions, flags)
+	_, err := q.db.Exec(ctx, createQuestionsConfig, panelID, questions, flags, qStyles, qPlaceholders, modalTitle)
 	return err
 }
 

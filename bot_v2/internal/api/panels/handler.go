@@ -45,7 +45,12 @@ func validatePanelPayload(p PanelPayload) utils.ValidationErrors {
 	}
 	for i, q := range p.Questions {
 		utils.ValidateMaxLength(q.Label, "questions["+strconv.Itoa(i)+"].label", 256, errs)
+		utils.ValidateMaxLength(q.Placeholder, "questions["+strconv.Itoa(i)+"].placeholder", 100, errs)
+		if q.Style != "" && q.Style != "short" && q.Style != "paragraph" {
+			errs["questions["+strconv.Itoa(i)+"].style"] = "style must be 'short' or 'paragraph'"
+		}
 	}
+	utils.ValidateMaxLength(p.QuestionsModalTitle, "questionsModalTitle", 45, errs)
 	utils.ValidateMaxLength(p.WelcomeMessage.Title, "welcomeMessage.title", 256, errs)
 	utils.ValidateMaxLength(p.WelcomeMessage.Description, "welcomeMessage.description", 4000, errs)
 	utils.ValidateMaxLength(p.WelcomeMessage.TitleURL, "welcomeMessage.titleUrl", 2048, errs)
@@ -132,7 +137,20 @@ func (h *Handler) HandleGetPanel(w http.ResponseWriter, r *http.Request) {
 		if i < len(questions.RequiredFlags) {
 			req = questions.RequiredFlags[i]
 		}
-		questionItems[i] = QuestionItem{Label: label, IsRequired: req}
+		style := "short"
+		if i < len(questions.Styles) && questions.Styles[i] != "" {
+			style = questions.Styles[i]
+		}
+		placeholder := ""
+		if i < len(questions.Placeholders) {
+			placeholder = questions.Placeholders[i]
+		}
+		questionItems[i] = QuestionItem{
+			Label:       label,
+			IsRequired:  req,
+			Style:       style,
+			Placeholder: placeholder,
+		}
 	}
 
 	welcome, hasWelcome, err := h.DB.GetPanelWelcome(context.Background(), panelID)
@@ -155,20 +173,26 @@ func (h *Handler) HandleGetPanel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	mTitle := questions.ModalTitle
+	if mTitle == "" {
+		mTitle = "Sushi Ticket Questions"
+	}
+
 	writeJSON(w, http.StatusOK, PanelDetail{
-		MentionRolesOnOpen: item.MentionRolesOnOpen,
-		CategoryID:         utils.TextOrEmpty(item.CategoryID),
-		Title:              item.Title,
-		Content:            utils.TextOrEmpty(item.Content),
-		EmbedColor:         item.EmbedColor,
-		ChannelID:          item.ChannelID,
-		BtnColor:           item.BtnColor,
-		BtnTxt:             item.BtnTxt,
-		BtnEmoji:           utils.TextOrEmpty(item.BtnEmoji),
-		LargeImgUrl:        utils.TextOrEmpty(item.LargeImgUrl),
-		SmallImgUrl:        utils.TextOrEmpty(item.SmallImgUrl),
-		Questions:          questionItems,
-		WelcomeMessage:     welcomePayload,
+		MentionRolesOnOpen:  item.MentionRolesOnOpen,
+		CategoryID:          utils.TextOrEmpty(item.CategoryID),
+		Title:               item.Title,
+		Content:             utils.TextOrEmpty(item.Content),
+		EmbedColor:          item.EmbedColor,
+		ChannelID:           item.ChannelID,
+		BtnColor:            item.BtnColor,
+		BtnTxt:              item.BtnTxt,
+		BtnEmoji:            utils.TextOrEmpty(item.BtnEmoji),
+		LargeImgUrl:         utils.TextOrEmpty(item.LargeImgUrl),
+		SmallImgUrl:         utils.TextOrEmpty(item.SmallImgUrl),
+		Questions:           questionItems,
+		QuestionsModalTitle: mTitle,
+		WelcomeMessage:      welcomePayload,
 	})
 }
 
@@ -233,13 +257,25 @@ func (h *Handler) HandleCreatePanel(w http.ResponseWriter, r *http.Request) {
 	}
 	qLabels := make([]string, 0, len(payload.Questions))
 	qFlags := make([]bool, 0, len(payload.Questions))
+	qStyles := make([]string, 0, len(payload.Questions))
+	qPlaceholders := make([]string, 0, len(payload.Questions))
 	for _, q := range payload.Questions {
 		if q.Label != "" {
 			qLabels = append(qLabels, q.Label)
 			qFlags = append(qFlags, q.IsRequired)
+			if q.Style == "paragraph" {
+				qStyles = append(qStyles, "paragraph")
+			} else {
+				qStyles = append(qStyles, "short")
+			}
+			qPlaceholders = append(qPlaceholders, q.Placeholder)
 		}
 	}
-	if err := h.DB.ReplaceQuestionsConfig(context.Background(), item.ID, qLabels, qFlags); err != nil {
+	mTitle := payload.QuestionsModalTitle
+	if mTitle == "" {
+		mTitle = "Sushi Ticket Questions"
+	}
+	if err := h.DB.ReplaceQuestionsConfig(context.Background(), item.ID, qLabels, qFlags, qStyles, qPlaceholders, mTitle); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save questions"})
 		return
 	}
@@ -310,13 +346,25 @@ func (h *Handler) HandleUpdatePanel(w http.ResponseWriter, r *http.Request) {
 	}
 	uqLabels := make([]string, 0, len(payload.Questions))
 	uqFlags := make([]bool, 0, len(payload.Questions))
+	uqStyles := make([]string, 0, len(payload.Questions))
+	uqPlaceholders := make([]string, 0, len(payload.Questions))
 	for _, q := range payload.Questions {
 		if q.Label != "" {
 			uqLabels = append(uqLabels, q.Label)
 			uqFlags = append(uqFlags, q.IsRequired)
+			if q.Style == "paragraph" {
+				uqStyles = append(uqStyles, "paragraph")
+			} else {
+				uqStyles = append(uqStyles, "short")
+			}
+			uqPlaceholders = append(uqPlaceholders, q.Placeholder)
 		}
 	}
-	if err := h.DB.ReplaceQuestionsConfig(context.Background(), panelID, uqLabels, uqFlags); err != nil {
+	mTitle := payload.QuestionsModalTitle
+	if mTitle == "" {
+		mTitle = "Sushi Ticket Questions"
+	}
+	if err := h.DB.ReplaceQuestionsConfig(context.Background(), panelID, uqLabels, uqFlags, uqStyles, uqPlaceholders, mTitle); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save questions"})
 		return
 	}

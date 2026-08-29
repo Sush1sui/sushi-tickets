@@ -52,7 +52,7 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	dbQuestions, _, err := loadPanelQuestions(int32(panelID))
+	_, dbQuestions, err := loadPanelQuestions(int32(panelID))
 	if err != nil {
 		log.Printf("failed to load questions for modal submit: %v", err)
 	}
@@ -61,7 +61,7 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	qna := make([]QnA, 0, len(dbQuestions))
 	for idx, q := range dbQuestions {
 		ans := answersMap[idx]
-		qna = append(qna, QnA{Question: q, Answer: ans})
+		qna = append(qna, QnA{Question: q.Label, Answer: ans})
 	}
 
 	// Fallback if DB questions list is empty but modal has answers
@@ -84,7 +84,7 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32) {
-	questions, required, err := loadPanelQuestions(panelID)
+	modalTitle, questions, err := loadPanelQuestions(panelID)
 	if err != nil {
 		log.Printf("load questions failed: %v", err)
 		respondEphemeral(s, i, "Failed to load panel. Please try again later.")
@@ -92,7 +92,7 @@ func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panel
 	}
 
 	if len(questions) > 0 {
-		showQuestionsModal(s, i, panelID, questions, required)
+		showQuestionsModal(s, i, panelID, modalTitle, questions)
 		return
 	}
 

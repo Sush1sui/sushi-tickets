@@ -217,7 +217,7 @@ func canCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
 	return false
 }
 
-func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, questions []string, required []bool) {
+func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, modalTitle string, questions []QuestionData) {
 	inputs := make([]discordgo.MessageComponent, 0, 5)
 	limit := len(questions)
 	if limit > 5 {
@@ -226,41 +226,85 @@ func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, pa
 
 	for idx := 0; idx < limit; idx++ {
 		q := questions[idx]
-		req := false
-		if idx < len(required) {
-			req = required[idx]
+		style := discordgo.TextInputShort
+		if q.Style == "paragraph" {
+			style = discordgo.TextInputParagraph
 		}
+
+		label := q.Label
+		if len(label) > 45 {
+			label = label[:45]
+		}
+		placeholder := q.Placeholder
+		if len(placeholder) > 100 {
+			placeholder = placeholder[:100]
+		}
+
 		inputs = append(inputs, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.TextInput{
-					CustomID: fmt.Sprintf("q_%d", idx),
-					Label:    q,
-					Style:    discordgo.TextInputParagraph,
-					Required: req,
+					CustomID:    fmt.Sprintf("q_%d", idx),
+					Label:       label,
+					Style:       style,
+					Required:    q.IsRequired,
+					Placeholder: placeholder,
 				},
 			},
 		})
+	}
+
+	title := modalTitle
+	if title == "" {
+		title = "Sushi Ticket Questions"
+	}
+	if len(title) > 45 {
+		title = title[:45]
 	}
 
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
 			CustomID:   fmt.Sprintf("%s%d", panelModalPrefix, panelID),
-			Title:      "Ticket Questions",
+			Title:      title,
 			Components: inputs,
 		},
 	})
 }
 
-func loadPanelQuestions(panelID int32) ([]string, []bool, error) {
+func loadPanelQuestions(panelID int32) (string, []QuestionData, error) {
 	if queries == nil {
-		return nil, nil, fmt.Errorf("queries not set")
+		return "", nil, fmt.Errorf("queries not set")
 	}
 	row, err := queries.GetPanelQuestions(context.Background(), panelID)
 	if err != nil {
-		return nil, nil, err
+		return "", nil, err
 	}
-	return row.Questions, row.RequiredFlags, nil
+	modalTitle := row.ModalTitle
+	if modalTitle == "" {
+		modalTitle = "Sushi Ticket Questions"
+	}
+	result := make([]QuestionData, len(row.Questions))
+	for idx, label := range row.Questions {
+		req := false
+		if idx < len(row.RequiredFlags) {
+			req = row.RequiredFlags[idx]
+		}
+		style := "short"
+		if idx < len(row.Styles) && row.Styles[idx] != "" {
+			style = row.Styles[idx]
+		}
+		placeholder := ""
+		if idx < len(row.Placeholders) {
+			placeholder = row.Placeholders[idx]
+		}
+		result[idx] = QuestionData{
+			Label:       label,
+			IsRequired:  req,
+			Style:       style,
+			Placeholder: placeholder,
+		}
+	}
+	return modalTitle, result, nil
 }
 
 func parsePanelID(value, prefix string) (int32, bool) {

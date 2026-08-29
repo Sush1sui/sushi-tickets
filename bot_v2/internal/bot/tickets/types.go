@@ -9,6 +9,13 @@ type QnA struct {
 	Answer   string
 }
 
+type QuestionData struct {
+	Label       string
+	IsRequired  bool
+	Style       string
+	Placeholder string
+}
+
 const (
 	panelButtonPrefix = "open_ticket_"
 	panelSelectID     = "select_panel"
