@@ -280,6 +280,8 @@ export type PanelConfig = {
 export type QuestionItem = {
   label: string;
   isRequired: boolean;
+  style?: "short" | "paragraph";
+  placeholder?: string;
 };
 
 export type CreatePanelPayload = {
@@ -295,6 +297,7 @@ export type CreatePanelPayload = {
   largeImgUrl: string;
   smallImgUrl: string;
   questions: QuestionItem[];
+  questionsModalTitle?: string;
   welcomeMessage: WelcomeMessagePayload;
 };
 
@@ -311,6 +314,7 @@ export type PanelDetail = {
   largeImgUrl: string;
   smallImgUrl: string;
   questions: QuestionItem[];
+  questionsModalTitle?: string;
   welcomeMessage: WelcomeMessagePayload | null;
 };
 

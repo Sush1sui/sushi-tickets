@@ -121,20 +121,20 @@ export default function CreateMultiPanelPage() {
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
-			{/* Header */}
-			<div className="flex items-center justify-between mb-2">
+			{/* Sticky Header */}
+			<div className="sticky top-0 z-30 flex items-center justify-between mb-4 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
 				<div>
 					<h1 className="text-xl font-black tracking-tight text-white">Create Multi Panel</h1>
-					<p className="text-xs text-zinc-500 mt-0.5">
+					<p className="text-xs text-zinc-400 mt-0.5">
 						Create a single message embed containing multiple ticket options or a dropdown selection.
 					</p>
 				</div>
 				<button
 					type="submit"
 					disabled={saving || isLoading}
-					className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-[0_0_16px_rgba(255,90,54,0.25)] transition-all duration-200 active:scale-95 disabled:opacity-60"
+					className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
 				>
-					<Save className="h-3.5 w-3.5" />
+					<Save className="h-4 w-4" />
 					{saving ? "Saving..." : "Create Multi Panel"}
 				</button>
 			</div>

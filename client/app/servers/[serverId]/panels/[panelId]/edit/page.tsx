@@ -50,6 +50,7 @@ type PanelForm = {
 	title: string;
 	content: string;
 	questions: QuestionItem[];
+	questionsModalTitle: string;
 	welcomeMessage: {
 		embedColor: string;
 		title: string;
@@ -117,7 +118,8 @@ export default function EditPanelPage() {
 		categoryId: "",
 		title: "",
 		content: "",
-		questions: [{ label: "", isRequired: false }],
+		questions: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+		questionsModalTitle: "Sushi Ticket Questions",
 		welcomeMessage: {
 			embedColor: "#57f287",
 			title: "",
@@ -175,8 +177,14 @@ export default function EditPanelPage() {
 			title: panel.title ?? "",
 			content: panel.content ?? "",
 			questions: panel.questions?.length
-				? panel.questions.map((q) => ({ label: q.label, isRequired: q.isRequired }))
-				: [{ label: "", isRequired: false }],
+				? panel.questions.map((q) => ({
+						label: q.label,
+						isRequired: q.isRequired,
+						style: q.style || "short",
+						placeholder: q.placeholder || "",
+					}))
+				: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+			questionsModalTitle: panel.questionsModalTitle || "Sushi Ticket Questions",
 			welcomeMessage: {
 				embedColor: toHex(welcome?.embedColor ?? 0, "#57f287"),
 				title: welcome?.title ?? "",
@@ -245,7 +253,15 @@ export default function EditPanelPage() {
 				btnEmoji: emojiValue,
 				largeImgUrl: form.largeImageUrl,
 				smallImgUrl: form.smallImageUrl,
-				questions: form.questions.filter((q) => q.label.trim() !== ""),
+				questions: form.questions
+					.filter((q) => q.label.trim() !== "")
+					.map((q) => ({
+						label: q.label.trim(),
+						isRequired: q.isRequired,
+						style: q.style || "short",
+						placeholder: q.placeholder?.trim() || "",
+					})),
+				questionsModalTitle: form.questionsModalTitle.trim() || "Sushi Ticket Questions",
 				welcomeMessage: {
 					embedColor:
 						parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
@@ -298,11 +314,11 @@ export default function EditPanelPage() {
 	return (
 		<>
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
-			{/* Header */}
-			<div className="flex items-center justify-between mb-2">
+			{/* Sticky Header */}
+			<div className="sticky top-0 z-30 flex items-center justify-between mb-4 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
 				<div>
 					<h1 className="text-xl font-black tracking-tight text-white">Edit Panel</h1>
-					<p className="text-xs text-zinc-500 mt-0.5">
+					<p className="text-xs text-zinc-400 mt-0.5">
 						Update the ticket panel details and embed parameters.
 					</p>
 				</div>
@@ -311,7 +327,7 @@ export default function EditPanelPage() {
 						type="button"
 						onClick={() => setModalOpen(true)}
 						disabled={deleting || isLoading}
-						className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60"
+						className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer"
 					>
 						<Trash className="h-3.5 w-3.5" />
 						{deleting ? "Deleting..." : "Delete Panel"}
@@ -319,9 +335,9 @@ export default function EditPanelPage() {
 					<button
 						type="submit"
 						disabled={saving || isLoading}
-						className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-[0_0_16px_rgba(255,90,54,0.25)] transition-all duration-200 active:scale-95 disabled:opacity-60"
+						className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
 					>
-						<Save className="h-3.5 w-3.5" />
+						<Save className="h-4 w-4" />
 						{saving ? "Saving..." : "Save Changes"}
 					</button>
 				</div>
@@ -482,71 +498,155 @@ export default function EditPanelPage() {
 
 						{/* Questions */}
 						<SectionCard
-							title="Questions"
-							description="Users answer these when opening a ticket."
+							title="Pre-Flight Questions"
+							description="Users will fill these out before a ticket is created."
 							action={
 								<button
 									type="button"
 									onClick={() =>
-										setForm((p) => ({ ...p, questions: [...p.questions, { label: "", isRequired: false }] }))
+										setForm((p) => ({
+											...p,
+											questions: [
+												...p.questions,
+												{ label: "", isRequired: false, style: "short", placeholder: "" },
+											],
+										}))
 									}
-									className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all"
+									className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm"
 								>
 									<Plus className="h-3.5 w-3.5" />
 									Add Question
 								</button>
 							}
 						>
-							<div className="space-y-2.5">
+							<div className="space-y-4">
+								<FormLabel label="Modal Window Title" hint="Max 45 chars (popup header)">
+									<DarkInput
+										value={form.questionsModalTitle}
+										onChange={(e) =>
+											setForm((p) => ({
+												...p,
+												questionsModalTitle: e.target.value.slice(0, 45),
+											}))
+										}
+										placeholder="Sushi Ticket Questions"
+									/>
+								</FormLabel>
+
+								<div className="pt-2 border-t border-white/5 space-y-3">
 								{form.questions.map((question, index) => (
-									<div key={index} className="flex items-center gap-2">
-										<span className="text-xs font-mono text-zinc-600 w-5 shrink-0 text-right">
-											{index + 1}.
-										</span>
-										<DarkInput
-											value={question.label}
-											onChange={(e) => {
-												const next = [...form.questions];
-												next[index] = { ...next[index], label: e.target.value };
-												setForm((p) => ({ ...p, questions: next }));
-											}}
-											placeholder={`Question ${index + 1}...`}
-											className="flex-1"
-										/>
-										{/* Required toggle */}
-										<button
-											type="button"
-											onClick={() => {
-												const next = [...form.questions];
-												next[index] = { ...next[index], isRequired: !next[index].isRequired };
-												setForm((p) => ({ ...p, questions: next }));
-											}}
-											title={question.isRequired ? "Mark as optional" : "Mark as required"}
-											className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
-												question.isRequired
-													? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
-													: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
-											}`}
-										>
-											{question.isRequired ? "Required" : "Optional"}
-										</button>
-										<button
-											type="button"
-											onClick={() => {
-												const next = form.questions.filter((_, i) => i !== index);
-												setForm((p) => ({ ...p, questions: next.length ? next : [{ label: "", isRequired: false }] }));
-											}}
-											className="p-2 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/60 transition-all"
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-										</button>
+									<div
+										key={index}
+										className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5 space-y-2.5 transition-all hover:border-white/10"
+									>
+										{/* Top row: number, label, type toggle, required toggle, delete */}
+										<div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+											<span className="text-xs font-bold font-mono text-zinc-400 w-5 shrink-0 text-right">
+												{index + 1}.
+											</span>
+											<DarkInput
+												value={question.label}
+												onChange={(e) => {
+													const next = [...form.questions];
+													next[index] = { ...next[index], label: e.target.value };
+													setForm((p) => ({ ...p, questions: next }));
+												}}
+												placeholder={`Question ${index + 1} (e.g. Roblox Username)`}
+												className="flex-1 min-w-[180px]"
+											/>
+
+											{/* Input Style Toggle */}
+											<div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5 shrink-0">
+												<button
+													type="button"
+													onClick={() => {
+														const next = [...form.questions];
+														next[index] = { ...next[index], style: "short" };
+														setForm((p) => ({ ...p, questions: next }));
+													}}
+													className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+														(question.style || "short") === "short"
+															? "bg-[#FF5A36] text-white shadow-sm"
+															: "text-zinc-400 hover:text-zinc-200"
+													}`}
+													title="Single-line text input"
+												>
+													Single Line
+												</button>
+												<button
+													type="button"
+													onClick={() => {
+														const next = [...form.questions];
+														next[index] = { ...next[index], style: "paragraph" };
+														setForm((p) => ({ ...p, questions: next }));
+													}}
+													className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+														question.style === "paragraph"
+															? "bg-[#FF5A36] text-white shadow-sm"
+															: "text-zinc-400 hover:text-zinc-200"
+													}`}
+													title="Multi-line textarea"
+												>
+													Text Area
+												</button>
+											</div>
+
+											{/* Required toggle */}
+											<button
+												type="button"
+												onClick={() => {
+													const next = [...form.questions];
+													next[index] = { ...next[index], isRequired: !next[index].isRequired };
+													setForm((p) => ({ ...p, questions: next }));
+												}}
+												title={question.isRequired ? "Mark as optional" : "Mark as required"}
+												className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+													question.isRequired
+														? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
+														: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
+												}`}
+											>
+												{question.isRequired ? "Required" : "Optional"}
+											</button>
+
+											<button
+												type="button"
+												onClick={() => {
+													const next = form.questions.filter((_, i) => i !== index);
+													setForm((p) => ({
+														...p,
+														questions: next.length
+															? next
+															: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+													}));
+												}}
+												className="p-2 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all shrink-0 cursor-pointer"
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
+										</div>
+
+										{/* Bottom row: Optional Placeholder */}
+										<div className="pl-7 pr-1">
+											<DarkInput
+												value={question.placeholder || ""}
+												onChange={(e) => {
+													const next = [...form.questions];
+													next[index] = { ...next[index], placeholder: e.target.value };
+													setForm((p) => ({ ...p, questions: next }));
+												}}
+												placeholder="Optional placeholder (e.g. Enter your Roblox username...)"
+												className="text-xs py-1.5 bg-[#17181a] border-white/5"
+											/>
+										</div>
 									</div>
 								))}
 								{form.questions.length === 0 && (
-									<p className="text-xs text-zinc-600 text-center py-4">
-										No questions yet — click "Add Question" above.
+									<p className="text-xs text-zinc-400 italic text-center py-4">
+										No pre-flight questions — click "Add Question" above.
 									</p>
 								)}
+								</div>
 							</div>
 						</SectionCard>
 

@@ -30,6 +30,7 @@ type PanelForm = {
 	title: string;
 	content: string;
 	questions: QuestionItem[];
+	questionsModalTitle: string;
 	welcomeMessage: {
 		embedColor: string;
 		title: string;
@@ -62,7 +63,8 @@ export default function CreatePanelPage() {
 		categoryId: "",
 		title: "",
 		content: "",
-		questions: [{ label: "", isRequired: false }],
+		questions: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+		questionsModalTitle: "Sushi Ticket Questions",
 		welcomeMessage: {
 			embedColor: "#57f287",
 			title: "",
@@ -140,7 +142,15 @@ export default function CreatePanelPage() {
 				btnEmoji: emojiValue,
 				largeImgUrl: form.largeImageUrl,
 				smallImgUrl: form.smallImageUrl,
-				questions: form.questions.filter((q) => q.label.trim() !== ""),
+				questions: form.questions
+					.filter((q) => q.label.trim() !== "")
+					.map((q) => ({
+						label: q.label.trim(),
+						isRequired: q.isRequired,
+						style: q.style || "short",
+						placeholder: q.placeholder?.trim() || "",
+					})),
+				questionsModalTitle: form.questionsModalTitle.trim() || "Sushi Ticket Questions",
 				welcomeMessage: {
 					embedColor:
 						parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
@@ -172,8 +182,8 @@ export default function CreatePanelPage() {
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6 pb-6">
-			{/* Header */}
-			<div className="flex items-center justify-between mb-4 bg-white/2 border border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
+			{/* Sticky Header */}
+			<div className="sticky top-0 z-30 flex items-center justify-between mb-4 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
 				<div>
 					<h1 className="text-2xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Create Panel</h1>
 					<p className="text-xs text-zinc-300 font-semibold mt-1">
@@ -356,7 +366,13 @@ export default function CreatePanelPage() {
 							<button
 								type="button"
 								onClick={() =>
-									setForm((p) => ({ ...p, questions: [...p.questions, { label: "", isRequired: false }] }))
+									setForm((p) => ({
+										...p,
+										questions: [
+											...p.questions,
+											{ label: "", isRequired: false, style: "short", placeholder: "" },
+										],
+									}))
 								}
 								className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm"
 							>
@@ -365,49 +381,126 @@ export default function CreatePanelPage() {
 							</button>
 						}
 					>
-						<div className="space-y-3">
+						<div className="space-y-4">
+							<FormLabel label="Modal Window Title" hint="Max 45 chars (popup header)">
+								<DarkInput
+									value={form.questionsModalTitle}
+									onChange={(e) =>
+										setForm((p) => ({
+											...p,
+											questionsModalTitle: e.target.value.slice(0, 45),
+										}))
+									}
+									placeholder="Sushi Ticket Questions"
+								/>
+							</FormLabel>
+
+							<div className="pt-2 border-t border-white/5 space-y-3">
 							{form.questions.map((question, index) => (
-								<div key={index} className="flex items-center gap-3">
-									<span className="text-xs font-bold font-mono text-zinc-400 w-5 shrink-0 text-right">
-										{index + 1}.
-									</span>
-									<DarkInput
-										value={question.label}
-										onChange={(e) => {
-											const next = [...form.questions];
-											next[index] = { ...next[index], label: e.target.value };
-											setForm((p) => ({ ...p, questions: next }));
-										}}
-										placeholder={`Question ${index + 1} (e.g. Describe your issue...)`}
-										className="flex-1"
-									/>
-									{/* Required toggle */}
-									<button
-										type="button"
-										onClick={() => {
-											const next = [...form.questions];
-											next[index] = { ...next[index], isRequired: !next[index].isRequired };
-											setForm((p) => ({ ...p, questions: next }));
-										}}
-										title={question.isRequired ? "Mark as optional" : "Mark as required"}
-										className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
-											question.isRequired
-												? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
-												: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
-										}`}
-									>
-										{question.isRequired ? "Required" : "Optional"}
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											const next = form.questions.filter((_, i) => i !== index);
-											setForm((p) => ({ ...p, questions: next.length ? next : [{ label: "", isRequired: false }] }));
-										}}
-										className="p-2.5 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all shrink-0 cursor-pointer"
-									>
-										<Trash2 className="h-4 w-4" />
-									</button>
+								<div
+									key={index}
+									className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5 space-y-2.5 transition-all hover:border-white/10"
+								>
+									{/* Top row: number, label, type toggle, required toggle, delete */}
+									<div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+										<span className="text-xs font-bold font-mono text-zinc-400 w-5 shrink-0 text-right">
+											{index + 1}.
+										</span>
+										<DarkInput
+											value={question.label}
+											onChange={(e) => {
+												const next = [...form.questions];
+												next[index] = { ...next[index], label: e.target.value };
+												setForm((p) => ({ ...p, questions: next }));
+											}}
+											placeholder={`Question ${index + 1} (e.g. Roblox Username)`}
+											className="flex-1 min-w-[180px]"
+										/>
+
+										{/* Input Style Toggle */}
+										<div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5 shrink-0">
+											<button
+												type="button"
+												onClick={() => {
+													const next = [...form.questions];
+													next[index] = { ...next[index], style: "short" };
+													setForm((p) => ({ ...p, questions: next }));
+												}}
+												className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+													(question.style || "short") === "short"
+														? "bg-[#FF5A36] text-white shadow-sm"
+														: "text-zinc-400 hover:text-zinc-200"
+												}`}
+												title="Single-line text input"
+											>
+												Single Line
+											</button>
+											<button
+												type="button"
+												onClick={() => {
+													const next = [...form.questions];
+													next[index] = { ...next[index], style: "paragraph" };
+													setForm((p) => ({ ...p, questions: next }));
+												}}
+												className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+													question.style === "paragraph"
+														? "bg-[#FF5A36] text-white shadow-sm"
+														: "text-zinc-400 hover:text-zinc-200"
+												}`}
+												title="Multi-line textarea"
+											>
+												Text Area
+											</button>
+										</div>
+
+										{/* Required toggle */}
+										<button
+											type="button"
+											onClick={() => {
+												const next = [...form.questions];
+												next[index] = { ...next[index], isRequired: !next[index].isRequired };
+												setForm((p) => ({ ...p, questions: next }));
+											}}
+											title={question.isRequired ? "Mark as optional" : "Mark as required"}
+											className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+												question.isRequired
+													? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
+													: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
+											}`}
+										>
+											{question.isRequired ? "Required" : "Optional"}
+										</button>
+
+										<button
+											type="button"
+											onClick={() => {
+												const next = form.questions.filter((_, i) => i !== index);
+												setForm((p) => ({
+													...p,
+													questions: next.length
+														? next
+														: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+												}));
+											}}
+											className="p-2 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all shrink-0 cursor-pointer"
+										>
+											<Trash2 className="h-4 w-4" />
+										</button>
+									</div>
+
+									{/* Bottom row: Optional Placeholder */}
+									<div className="pl-7 pr-1">
+										<DarkInput
+											value={question.placeholder || ""}
+											onChange={(e) => {
+												const next = [...form.questions];
+												next[index] = { ...next[index], placeholder: e.target.value };
+												setForm((p) => ({ ...p, questions: next }));
+											}}
+											placeholder="Optional placeholder (e.g. Enter your Roblox username...)"
+											className="text-xs py-1.5 bg-[#17181a] border-white/5"
+										/>
+									</div>
 								</div>
 							))}
 							{form.questions.length === 0 && (
@@ -415,6 +508,7 @@ export default function CreatePanelPage() {
 									No pre-flight questions — click "Add Question" above.
 								</p>
 							)}
+							</div>
 						</div>
 					</SectionCard>
 
