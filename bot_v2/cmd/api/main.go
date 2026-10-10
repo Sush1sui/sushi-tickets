@@ -48,12 +48,12 @@ func main() {
 	queries := db.New(pool)
 	tickets.SetQueries(queries)
 
-	// 2. Connect to Azure Blob Storage
-	azureClient := storage.NewAzureClient()
-	tickets.SetStorage(azureClient)
+	// 2. Transcript storage (local filesystem)
+	fileClient := storage.NewFileClient()
+	tickets.SetStorage(fileClient)
 
 	// 3. Mount Router
-	mux := api.NewRouter(queries, azureClient, cfg)
+	mux := api.NewRouter(queries, fileClient, cfg)
 
 	// 4. Start Bot
 	bot.StartBot()

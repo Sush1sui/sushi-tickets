@@ -390,7 +390,6 @@ export type TranscriptListResponse = {
 
 export type TranscriptDetailResponse = {
   transcript: Transcript & { storageKey: string };
-  presignedUrl: string;
 };
 
 export type TranscriptMessage = {

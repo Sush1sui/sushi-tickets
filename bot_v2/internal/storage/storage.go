@@ -1,77 +1,76 @@
-// internal/storage/azure.go
+// internal/storage/storage.go
 package storage
 
 import (
-	"bytes"
 	"context"
-	"io"
+	"errors"
 	"log"
 	"os"
-	"time"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob" // Added specific blob package
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
+	"path/filepath"
+	"strings"
 )
 
+// ErrNotFound is returned when no transcript file exists for a key.
+var ErrNotFound = errors.New("transcript not found")
+
+// Client stores transcript JSON as files under a base directory.
+// Storage keys (transcripts/<server>/<channel>/<ts>.json) map 1:1 to paths.
 type Client struct {
-	client        *azblob.Client
-	containerName string
-	connStr       string // We will store this to spawn blob clients instantly
+	dir string
 }
 
-// NewAzureClient connects to your Azure Storage Account
-func NewAzureClient() *Client {
-	connStr := os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
-	containerName := os.Getenv("AZURE_STORAGE_CONTAINER")
-
-	if connStr == "" || containerName == "" {
-		log.Fatal("Missing AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_CONTAINER in .env")
+// NewFileClient resolves the transcript dir from TRANSCRIPT_DIR
+// (/var/lib/sushi-tickets-transcripts fallback) and ensures it exists.
+func NewFileClient() *Client {
+	dir := os.Getenv("TRANSCRIPT_DIR")
+	if dir == "" {
+		dir = "/var/lib/sushi-tickets-transcripts"
 	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		log.Fatalf("Failed to create transcript dir %s: %v", dir, err)
+	}
+	return &Client{dir: dir}
+}
 
-	// The root client is highly optimized for uploading streams
-	client, err := azblob.NewClientFromConnectionString(connStr, nil)
+// keyPath maps a storage key to a file under the base dir.
+// Clean resolves ".." lexically and Join keeps cleaned absolute paths
+// under dir, so a key can never escape the base directory.
+func (c *Client) keyPath(key string) (string, error) {
+	clean := filepath.Clean("/" + key)
+	if clean == "/" || strings.Contains(clean, "..") {
+		return "", errors.New("invalid storage key")
+	}
+	return filepath.Join(c.dir, clean), nil
+}
+
+// UploadTranscript writes transcript JSON atomically (tmp + rename).
+func (c *Client) UploadTranscript(_ context.Context, key string, data []byte) error {
+	p, err := c.keyPath(key)
 	if err != nil {
-		log.Fatalf("Failed to create Azure client: %v", err)
+		return err
 	}
-
-	return &Client{
-		client:        client,
-		containerName: containerName,
-		connStr:       connStr, // Save the connection string for SAS generation
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err
 	}
+	tmp := p + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, p)
 }
 
-// UploadTranscript streams your minified JSON straight into Azure
-func (c *Client) UploadTranscript(ctx context.Context, key string, data []byte) error {
-	reader := bytes.NewReader(data)
-	_, err := c.client.UploadStream(ctx, c.containerName, key, reader, &azblob.UploadStreamOptions{})
-	return err
-}
-
-// GeneratePresignedURL creates a secure, 1-hour link for the React dashboard
-func (c *Client) GeneratePresignedURL(key string) (string, error) {
-	// 1. Create a client dedicated to this exact blob file
-	blobClient, err := blob.NewClientFromConnectionString(c.connStr, c.containerName, key, nil)
-	if err != nil {
-		return "", err
-	}
-
-	// 2. Set Read-only permissions and 1-hour expiration
-	permissions := sas.BlobPermissions{Read: true}
-	expiry := time.Now().UTC().Add(1 * time.Hour)
-
-	// 3. Generate the SAS URL directly from the blob client
-	return blobClient.GetSASURL(permissions, expiry, nil)
-}
-
-// DownloadTranscript reads transcript JSON from Azure blob storage.
-func (c *Client) DownloadTranscript(ctx context.Context, key string) ([]byte, error) {
-	resp, err := c.client.DownloadStream(ctx, c.containerName, key, nil)
+// DownloadTranscript reads transcript JSON for a key.
+func (c *Client) DownloadTranscript(_ context.Context, key string) ([]byte, error) {
+	p, err := c.keyPath(key)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	return io.ReadAll(resp.Body)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return data, nil
 }

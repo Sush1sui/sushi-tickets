@@ -53,7 +53,6 @@ export function useTranscript(serverId: string, transcriptId: string) {
 
   return {
     transcript: data?.transcript ?? null,
-    presignedUrl: data?.presignedUrl ?? null,
     isLoading,
     isError: !!error,
     refresh: mutate,

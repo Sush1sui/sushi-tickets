@@ -31,3 +31,7 @@ Caddyfile
 CADDYFILE_README.md
 ACCESS_TOKEN_ROTATION.md
 .vercel
+
+GRAPHIFY.md
+.gitattributes
+graphify-out

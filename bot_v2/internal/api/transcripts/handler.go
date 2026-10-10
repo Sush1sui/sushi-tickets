@@ -3,11 +3,13 @@ package transcripts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/Sush1sui/FNS_BOT/internal/db"
+	"github.com/Sush1sui/FNS_BOT/internal/storage"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -84,16 +86,8 @@ func (h *Handler) HandleGetTranscript(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	presignedURL, err := h.Storage.GeneratePresignedURL(item.StorageKey)
-	if err != nil {
-		log.Printf("generate presigned url failed: %v", err)
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to generate download link"})
-		return
-	}
-
 	writeJSON(w, http.StatusOK, map[string]any{
-		"transcript":   formatTranscript(item),
-		"presignedUrl": presignedURL,
+		"transcript": formatTranscript(item),
 	})
 }
 
@@ -120,6 +114,10 @@ func (h *Handler) HandleGetTranscriptContent(w http.ResponseWriter, r *http.Requ
 
 	data, err := h.Storage.DownloadTranscript(context.Background(), item.StorageKey)
 	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "transcript file not found"})
+			return
+		}
 		log.Printf("download transcript failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to download transcript"})
 		return
