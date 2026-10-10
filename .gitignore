@@ -35,3 +35,8 @@ ACCESS_TOKEN_ROTATION.md
 GRAPHIFY.md
 .gitattributes
 graphify-out
+
+# Self-hosted deploy artifacts (built on the server, never committed)
+bot_v2/api
+bot_v2/api.prev
+bot_v2/fns-api

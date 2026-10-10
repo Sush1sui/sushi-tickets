@@ -1,0 +1,23 @@
+name: deploy-bot
+on:
+  push:
+    branches: [main]
+    paths: ["bot_v2/**"]
+concurrency:
+  group: bot-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, sushi-box]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - name: Guard migrations are manual
+        run: |
+          if git diff --name-only HEAD~1 HEAD -- bot_v2/sql/ | grep -q .; then
+            echo "::error::bot_v2/sql/ changed — run migrate on the box first, then re-run this job"
+            exit 1
+          fi
+      - name: Deploy
+        run: bash bot_v2/scripts/deploy.sh "${{ github.sha }}"
