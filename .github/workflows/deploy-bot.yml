@@ -1,8 +1,9 @@
 name: deploy-bot
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths: ["bot_v2/**"]
+  workflow_dispatch:
 concurrency:
   group: bot-deploy
   cancel-in-progress: false
