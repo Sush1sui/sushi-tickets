@@ -122,10 +122,10 @@ export default function CreateMultiPanelPage() {
 	return (
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
 			{/* Sticky Header */}
-			<div className="sticky top-0 z-30 flex items-center justify-between mb-4 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
+			<div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
 				<div>
-					<h1 className="text-xl font-black tracking-tight text-white">Create Multi Panel</h1>
-					<p className="text-xs text-zinc-400 mt-0.5">
+					<h1 className="text-xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Create Multi Panel</h1>
+					<p className="text-xs text-zinc-300 font-semibold mt-1">
 						Create a single message embed containing multiple ticket options or a dropdown selection.
 					</p>
 				</div>

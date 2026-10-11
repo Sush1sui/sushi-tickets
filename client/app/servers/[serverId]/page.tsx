@@ -202,7 +202,7 @@ export default function ServerSettingsPage() {
   return (
     <div className="space-y-6 pb-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 bg-white/2 border border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
+      <div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-white uppercase text-glow-sushi/10">
             Server Settings
@@ -214,7 +214,7 @@ export default function ServerSettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 ${
+          className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer ${
             saved
               ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
               : "bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 hover:-translate-y-0.5"

@@ -178,7 +178,7 @@ export default function ServerLayout({
 								const href = `/servers/${serverId}${item.href}`;
 								return item.href === ""
 									? pathname === `/servers/${serverId}`
-									: pathname.startsWith(href);
+									: pathname.startsWith(href) || (item.href === "/panels" && pathname.includes("/multi-panels"));
 							});
 							return (
 								<>

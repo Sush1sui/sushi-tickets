@@ -183,7 +183,7 @@ export default function CreatePanelPage() {
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6 pb-6">
 			{/* Top Header */}
-			<div className="flex items-center justify-between mb-4 bg-white/2 border border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
+			<div className="sticky top-20 z-30 lg:static flex items-center justify-between mb-4 bg-white/2 border border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
 				<div>
 					<h1 className="text-2xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Create Panel</h1>
 					<p className="text-xs text-zinc-300 font-semibold mt-1">
@@ -645,11 +645,15 @@ export default function CreatePanelPage() {
 				{/* RIGHT COLUMN: Real-Time Live Discord Preview & Sticky Action Bar (5/12 width) */}
 				<div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
 					{/* Sticky Quick Action in Right Sidebar */}
-					<div className="bg-white/[0.03] border border-white/5 p-3 rounded-2xl shadow-xl backdrop-blur-md">
+					<div className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 p-3 rounded-2xl shadow-xl backdrop-blur-md">
+						<div className="flex items-center gap-2 px-1">
+							<span className="h-2 w-2 rounded-full bg-[#FF5A36] animate-pulse" />
+							<span className="text-xs font-bold text-zinc-300">Publish Panel</span>
+						</div>
 						<button
 							type="submit"
 							disabled={saving || isLoading}
-							className="w-full flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/30 transition-all duration-200 active:scale-95 disabled:opacity-60 hover:-translate-y-0.5 cursor-pointer text-glow-sushi"
+							className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/30 transition-all duration-200 active:scale-95 disabled:opacity-60 hover:-translate-y-0.5 cursor-pointer text-glow-sushi shrink-0"
 						>
 							<Save className="h-4 w-4" />
 							<span>{saving ? "Saving..." : "Create Panel"}</span>

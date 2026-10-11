@@ -188,10 +188,10 @@ export default function EditMultiPanelPage() {
 		<>
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
 			{/* Sticky Header */}
-			<div className="sticky top-0 z-30 flex items-center justify-between mb-4 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
+			<div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
 				<div>
-					<h1 className="text-xl font-black tracking-tight text-white">Edit Multi Panel</h1>
-					<p className="text-xs text-zinc-400 mt-0.5">
+					<h1 className="text-xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Edit Multi Panel</h1>
+					<p className="text-xs text-zinc-300 font-semibold mt-1">
 						Update details and configuration of this multi panel embed.
 					</p>
 				</div>
@@ -200,7 +200,7 @@ export default function EditMultiPanelPage() {
 						type="button"
 						onClick={() => setModalOpen(true)}
 						disabled={deleting || isLoading}
-						className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer"
+						className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer shrink-0"
 					>
 						<Trash className="h-3.5 w-3.5" />
 						{deleting ? "Deleting..." : "Delete Multi Panel"}
