@@ -8,6 +8,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// NOTE: ActiveTicket / AuthSession / IdempotencyKey model types are intentionally
+// removed here because hand-written equivalents exist (active_tickets.go,
+// auth_sessions.go, idempotency.go). Re-add if those files are deleted.
+
 type AuthorizedMember struct {
 	ServerConfigID int64
 	MemberID       string
@@ -57,11 +61,23 @@ type PanelConfig struct {
 	SmallImgUrl        pgtype.Text
 }
 
+type PanelScheduleWindow struct {
+	ID            int64
+	PanelConfigID int32
+	StartTime     int64
+	EndTime       int64
+	ClosedEarly   bool
+	CreatedAt     int64
+}
+
 type QuestionsConfig struct {
 	ID            int32
 	PanelConfigID int32
 	Questions     []string
 	RequiredFlags []bool
+	Styles        []string
+	Placeholders  []string
+	ModalTitle    string
 }
 
 type ServerConfig struct {

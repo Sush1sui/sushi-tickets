@@ -26,6 +26,7 @@ import {
 	SectionCard,
 	FormLabel,
 } from "../../../../../../components/DarkFormFields";
+import ScheduleWindows from "../../../../../../components/ScheduleWindows";
 import { Save, Plus, Trash2, Trash } from "lucide-react";
 
 const buttonColorOptions = [
@@ -495,6 +496,9 @@ export default function EditPanelPage() {
 								</div>
 							</div>
 						</SectionCard>
+
+						{/* Schedule Windows */}
+						<ScheduleWindows serverId={serverId} panelId={panelId} />
 
 						{/* Questions */}
 						<SectionCard

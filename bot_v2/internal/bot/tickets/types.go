@@ -25,6 +25,20 @@ const (
 
 var errMaxTickets = fmt.Errorf("max tickets reached")
 
+// errWindowClosed is returned when a panel has scheduled windows but none is
+// active right now. NextStartTime is the unix timestamp of the next upcoming
+// window, or 0 when nothing is queued.
+type errWindowClosed struct {
+	NextStartTime int64
+}
+
+func (e *errWindowClosed) Error() string {
+	if e.NextStartTime > 0 {
+		return fmt.Sprintf("panel window closed, next opens at %d", e.NextStartTime)
+	}
+	return "panel window closed"
+}
+
 type transcriptPayload struct {
 	TicketID string              `json:"ticketId"`
 	Username string              `json:"username"`

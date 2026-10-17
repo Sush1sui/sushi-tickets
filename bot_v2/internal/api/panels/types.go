@@ -55,6 +55,20 @@ type MultiPanelPayload struct {
 	FootIconUrl    string  `json:"footIconUrl"`
 }
 
+type ScheduleWindowPayload struct {
+	StartTime int64 `json:"startTime"`
+	EndTime   int64 `json:"endTime"`
+}
+
+type ScheduleWindowView struct {
+	ID            int64 `json:"id"`
+	PanelConfigID int32 `json:"panelConfigId"`
+	StartTime     int64 `json:"startTime"`
+	EndTime       int64 `json:"endTime"`
+	ClosedEarly   bool  `json:"closedEarly"`
+	CreatedAt     int64 `json:"createdAt"`
+}
+
 type PanelDetail struct {
 	MentionRolesOnOpen  []string               `json:"mentionRolesOnOpen"`
 	CategoryID          string                 `json:"categoryId"`

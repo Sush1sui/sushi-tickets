@@ -69,6 +69,14 @@ func NewRouter(queries *db.Queries, storageClient *storage.Client, cfg *config.C
 	mux.HandleFunc("DELETE /api/servers/{server_id}/panels/{panel_id}", s.wrapAuthConfig(panelsHandler.HandleDeletePanel))
 	mux.HandleFunc("POST /api/servers/{server_id}/panels/{panel_id}/send", s.wrapAuthConfig(panelsHandler.HandleSendPanel))
 
+	// Panel schedule window routes
+	mux.HandleFunc("GET /api/servers/{server_id}/panels/{panel_id}/schedule", s.wrapAuthConfig(panelsHandler.HandleListScheduleWindows))
+	mux.HandleFunc("POST /api/servers/{server_id}/panels/{panel_id}/schedule", s.wrapAuthConfig(panelsHandler.HandleCreateScheduleWindow))
+	mux.HandleFunc("PUT /api/servers/{server_id}/panels/{panel_id}/schedule/{window_id}", s.wrapAuthConfig(panelsHandler.HandleUpdateScheduleWindow))
+	mux.HandleFunc("DELETE /api/servers/{server_id}/panels/{panel_id}/schedule/{window_id}", s.wrapAuthConfig(panelsHandler.HandleDeleteScheduleWindow))
+	mux.HandleFunc("POST /api/servers/{server_id}/panels/{panel_id}/schedule/{window_id}/close", s.wrapAuthConfig(panelsHandler.HandleCloseScheduleWindow))
+	mux.HandleFunc("POST /api/servers/{server_id}/panels/{panel_id}/schedule/{window_id}/open", s.wrapAuthConfig(panelsHandler.HandleReopenScheduleWindow))
+
 	// Multi-panel routes
 	mux.HandleFunc("GET /api/servers/{server_id}/multi-panels", s.wrapAuthConfig(panelsHandler.HandleListMultiPanels))
 	mux.HandleFunc("GET /api/servers/{server_id}/multi-panels/{multi_panel_id}", s.wrapAuthConfig(panelsHandler.HandleGetMultiPanel))

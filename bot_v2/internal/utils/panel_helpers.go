@@ -42,6 +42,25 @@ func ParseServerMultiPanelIDs(r *http.Request) (int64, int32, error) {
 	return serverID, int32(panelID64), nil
 }
 
+func ParseServerPanelWindowIDs(r *http.Request) (int64, int32, int64, error) {
+	serverIDStr := r.PathValue("server_id")
+	panelIDStr := r.PathValue("panel_id")
+	windowIDStr := r.PathValue("window_id")
+	serverID, err := strconv.ParseInt(serverIDStr, 10, 64)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	panelID64, err := strconv.ParseInt(panelIDStr, 10, 32)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	windowID, err := strconv.ParseInt(windowIDStr, 10, 64)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return serverID, int32(panelID64), windowID, nil
+}
+
 func ToText(value string) pgtype.Text {
 	return pgtype.Text{String: value, Valid: value != ""}
 }

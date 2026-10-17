@@ -96,3 +96,55 @@ INSERT INTO transcript (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING *;
+
+-- name: GetActiveScheduleWindow :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+  AND start_time <= $2
+  AND end_time > $2
+  AND closed_early = false
+ORDER BY start_time DESC
+LIMIT 1;
+
+-- name: GetNextScheduleWindow :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+  AND start_time > $2
+ORDER BY start_time ASC
+LIMIT 1;
+
+-- name: HasAnyScheduleWindow :one
+SELECT EXISTS(SELECT 1 FROM panel_schedule_window WHERE panel_config_id = $1);
+
+-- name: ListScheduleWindowsByPanel :many
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+ORDER BY start_time ASC;
+
+-- name: GetScheduleWindowByID :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE id = $1;
+
+-- name: CreateScheduleWindow :one
+INSERT INTO panel_schedule_window (panel_config_id, start_time, end_time, closed_early, created_at)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
+-- name: UpdateScheduleWindow :one
+UPDATE panel_schedule_window
+SET start_time = $2, end_time = $3
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteScheduleWindow :exec
+DELETE FROM panel_schedule_window WHERE id = $1;
+
+-- name: DeleteScheduleWindowsByPanel :exec
+DELETE FROM panel_schedule_window WHERE panel_config_id = $1;
+
+-- name: SetScheduleWindowClosedEarly :exec
+UPDATE panel_schedule_window SET closed_early = $2 WHERE id = $1;

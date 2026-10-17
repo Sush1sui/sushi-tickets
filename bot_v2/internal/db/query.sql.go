@@ -40,6 +40,40 @@ func (q *Queries) CountTranscriptsByServer(ctx context.Context, serverConfigID i
 	return count, err
 }
 
+const createScheduleWindow = `-- name: CreateScheduleWindow :one
+INSERT INTO panel_schedule_window (panel_config_id, start_time, end_time, closed_early, created_at)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, panel_config_id, start_time, end_time, closed_early, created_at
+`
+
+type CreateScheduleWindowParams struct {
+	PanelConfigID int32
+	StartTime     int64
+	EndTime       int64
+	ClosedEarly   bool
+	CreatedAt     int64
+}
+
+func (q *Queries) CreateScheduleWindow(ctx context.Context, arg CreateScheduleWindowParams) (PanelScheduleWindow, error) {
+	row := q.db.QueryRow(ctx, createScheduleWindow,
+		arg.PanelConfigID,
+		arg.StartTime,
+		arg.EndTime,
+		arg.ClosedEarly,
+		arg.CreatedAt,
+	)
+	var i PanelScheduleWindow
+	err := row.Scan(
+		&i.ID,
+		&i.PanelConfigID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClosedEarly,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createTranscript = `-- name: CreateTranscript :one
 INSERT INTO transcript (
     server_config_id, ticket_id, username, user_id,
@@ -124,6 +158,54 @@ func (q *Queries) DeleteAuthorizedRole(ctx context.Context, arg DeleteAuthorized
 	return err
 }
 
+const deleteScheduleWindow = `-- name: DeleteScheduleWindow :exec
+DELETE FROM panel_schedule_window WHERE id = $1
+`
+
+func (q *Queries) DeleteScheduleWindow(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteScheduleWindow, id)
+	return err
+}
+
+const deleteScheduleWindowsByPanel = `-- name: DeleteScheduleWindowsByPanel :exec
+DELETE FROM panel_schedule_window WHERE panel_config_id = $1
+`
+
+func (q *Queries) DeleteScheduleWindowsByPanel(ctx context.Context, panelConfigID int32) error {
+	_, err := q.db.Exec(ctx, deleteScheduleWindowsByPanel, panelConfigID)
+	return err
+}
+
+const getActiveScheduleWindow = `-- name: GetActiveScheduleWindow :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+  AND start_time <= $2
+  AND end_time > $2
+  AND closed_early = false
+ORDER BY start_time DESC
+LIMIT 1
+`
+
+type GetActiveScheduleWindowParams struct {
+	PanelConfigID int32
+	StartTime     int64
+}
+
+func (q *Queries) GetActiveScheduleWindow(ctx context.Context, arg GetActiveScheduleWindowParams) (PanelScheduleWindow, error) {
+	row := q.db.QueryRow(ctx, getActiveScheduleWindow, arg.PanelConfigID, arg.StartTime)
+	var i PanelScheduleWindow
+	err := row.Scan(
+		&i.ID,
+		&i.PanelConfigID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClosedEarly,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getAuthorizedMembers = `-- name: GetAuthorizedMembers :many
 SELECT member_id FROM authorized_members
 WHERE server_config_id = $1
@@ -188,6 +270,54 @@ func (q *Queries) GetAutoCloseConfig(ctx context.Context, serverConfigID int64) 
 		&i.CloseOnUserLeave,
 		&i.CloseSinceOpenWithNoResponseMins,
 		&i.CloseSinceLastMessageMins,
+	)
+	return i, err
+}
+
+const getNextScheduleWindow = `-- name: GetNextScheduleWindow :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+  AND start_time > $2
+ORDER BY start_time ASC
+LIMIT 1
+`
+
+type GetNextScheduleWindowParams struct {
+	PanelConfigID int32
+	StartTime     int64
+}
+
+func (q *Queries) GetNextScheduleWindow(ctx context.Context, arg GetNextScheduleWindowParams) (PanelScheduleWindow, error) {
+	row := q.db.QueryRow(ctx, getNextScheduleWindow, arg.PanelConfigID, arg.StartTime)
+	var i PanelScheduleWindow
+	err := row.Scan(
+		&i.ID,
+		&i.PanelConfigID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClosedEarly,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getScheduleWindowByID = `-- name: GetScheduleWindowByID :one
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE id = $1
+`
+
+func (q *Queries) GetScheduleWindowByID(ctx context.Context, id int64) (PanelScheduleWindow, error) {
+	row := q.db.QueryRow(ctx, getScheduleWindowByID, id)
+	var i PanelScheduleWindow
+	err := row.Scan(
+		&i.ID,
+		&i.PanelConfigID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClosedEarly,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -338,6 +468,17 @@ func (q *Queries) GetTranscriptsByServer(ctx context.Context, arg GetTranscripts
 	return items, nil
 }
 
+const hasAnyScheduleWindow = `-- name: HasAnyScheduleWindow :one
+SELECT EXISTS(SELECT 1 FROM panel_schedule_window WHERE panel_config_id = $1)
+`
+
+func (q *Queries) HasAnyScheduleWindow(ctx context.Context, panelConfigID int32) (bool, error) {
+	row := q.db.QueryRow(ctx, hasAnyScheduleWindow, panelConfigID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const isMemberAuthorized = `-- name: IsMemberAuthorized :one
 SELECT EXISTS(SELECT 1 FROM authorized_members WHERE server_config_id = $1 AND member_id = $2)
 `
@@ -352,6 +493,81 @@ func (q *Queries) IsMemberAuthorized(ctx context.Context, arg IsMemberAuthorized
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listScheduleWindowsByPanel = `-- name: ListScheduleWindowsByPanel :many
+SELECT id, panel_config_id, start_time, end_time, closed_early, created_at
+FROM panel_schedule_window
+WHERE panel_config_id = $1
+ORDER BY start_time ASC
+`
+
+func (q *Queries) ListScheduleWindowsByPanel(ctx context.Context, panelConfigID int32) ([]PanelScheduleWindow, error) {
+	rows, err := q.db.Query(ctx, listScheduleWindowsByPanel, panelConfigID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PanelScheduleWindow
+	for rows.Next() {
+		var i PanelScheduleWindow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PanelConfigID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.ClosedEarly,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setScheduleWindowClosedEarly = `-- name: SetScheduleWindowClosedEarly :exec
+UPDATE panel_schedule_window SET closed_early = $2 WHERE id = $1
+`
+
+type SetScheduleWindowClosedEarlyParams struct {
+	ID          int64
+	ClosedEarly bool
+}
+
+func (q *Queries) SetScheduleWindowClosedEarly(ctx context.Context, arg SetScheduleWindowClosedEarlyParams) error {
+	_, err := q.db.Exec(ctx, setScheduleWindowClosedEarly, arg.ID, arg.ClosedEarly)
+	return err
+}
+
+const updateScheduleWindow = `-- name: UpdateScheduleWindow :one
+UPDATE panel_schedule_window
+SET start_time = $2, end_time = $3
+WHERE id = $1
+RETURNING id, panel_config_id, start_time, end_time, closed_early, created_at
+`
+
+type UpdateScheduleWindowParams struct {
+	ID        int64
+	StartTime int64
+	EndTime   int64
+}
+
+func (q *Queries) UpdateScheduleWindow(ctx context.Context, arg UpdateScheduleWindowParams) (PanelScheduleWindow, error) {
+	row := q.db.QueryRow(ctx, updateScheduleWindow, arg.ID, arg.StartTime, arg.EndTime)
+	var i PanelScheduleWindow
+	err := row.Scan(
+		&i.ID,
+		&i.PanelConfigID,
+		&i.StartTime,
+		&i.EndTime,
+		&i.ClosedEarly,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const upsertAuthorizedMember = `-- name: UpsertAuthorizedMember :exec

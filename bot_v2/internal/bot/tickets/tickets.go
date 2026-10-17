@@ -3,6 +3,7 @@ package tickets
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/bwmarrin/discordgo"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -78,9 +80,53 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			editEphemeral(s, i, "You reached max open tickets. Please close existing tickets.")
 			return
 		}
+		var werr *errWindowClosed
+		if errors.As(err, &werr) {
+			editEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
+			return
+		}
 		editEphemeral(s, i, "Failed to create ticket. Please try again later.")
 		return
 	}
+}
+
+func windowClosedMessage(nextStartTime int64) string {
+	if nextStartTime > 0 {
+		return fmt.Sprintf("Tickets are currently closed for this panel. Reopens <t:%d:R>.", nextStartTime)
+	}
+	return "Tickets are currently closed for this panel."
+}
+
+func checkScheduleWindow(ctx context.Context, panelID int32) error {
+	has, err := queries.HasAnyScheduleWindow(ctx, panelID)
+	if err != nil {
+		return err
+	}
+	if !has {
+		return nil
+	}
+
+	now := time.Now().Unix()
+	if _, err := queries.GetActiveScheduleWindow(ctx, db.GetActiveScheduleWindowParams{
+		PanelConfigID: panelID,
+		StartTime:     now,
+	}); err == nil {
+		return nil
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+
+	next := int64(0)
+	if w, err := queries.GetNextScheduleWindow(ctx, db.GetNextScheduleWindowParams{
+		PanelConfigID: panelID,
+		StartTime:     now,
+	}); err == nil && w.StartTime > now {
+		next = w.StartTime
+	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+
+	return &errWindowClosed{NextStartTime: next}
 }
 
 func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32) {
@@ -101,6 +147,11 @@ func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panel
 		log.Printf("open ticket failed: %v", err)
 		if err == errMaxTickets {
 			editEphemeral(s, i, "You reached max open tickets. Please close existing tickets.")
+			return
+		}
+		var werr *errWindowClosed
+		if errors.As(err, &werr) {
+			editEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
 			return
 		}
 		editEphemeral(s, i, "Failed to create ticket. Please try again later.")
@@ -124,6 +175,10 @@ func openTicket(s *discordgo.Session, i *discordgo.InteractionCreate, panelID in
 
 	panel, err := queries.GetPanelConfigByID(ctx, serverID, panelID)
 	if err != nil {
+		return err
+	}
+
+	if err := checkScheduleWindow(ctx, panelID); err != nil {
 		return err
 	}
 

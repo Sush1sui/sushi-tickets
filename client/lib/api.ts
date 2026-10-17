@@ -131,6 +131,59 @@ export const api = {
       ),
   },
 
+  panelSchedule: {
+    list: (serverId: string, panelId: string) =>
+      fetchApi<ScheduleWindow[]>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule`,
+      ),
+    create: (
+      serverId: string,
+      panelId: string,
+      payload: ScheduleWindowPayload,
+    ) =>
+      fetchApi<ScheduleWindow>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+    update: (
+      serverId: string,
+      panelId: string,
+      windowId: string,
+      payload: ScheduleWindowPayload,
+    ) =>
+      fetchApi<ScheduleWindow>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        },
+      ),
+    delete: (serverId: string, panelId: string, windowId: string) =>
+      fetchApi<{ status: string }>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}`,
+        {
+          method: "DELETE",
+        },
+      ),
+    close: (serverId: string, panelId: string, windowId: string) =>
+      fetchApi<ScheduleWindow>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}/close`,
+        {
+          method: "POST",
+        },
+      ),
+    reopen: (serverId: string, panelId: string, windowId: string) =>
+      fetchApi<ScheduleWindow>(
+        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}/open`,
+        {
+          method: "POST",
+        },
+      ),
+  },
+
   multiPanels: {
     list: (serverId: string) =>
       fetchApi<MultiPanelConfig[]>(`/api/servers/${serverId}/multi-panels`),
@@ -355,6 +408,20 @@ export type MultiPanelPayload = {
   panelConfigIds: number[];
   footer: string;
   footIconUrl: string;
+};
+
+export type ScheduleWindow = {
+  id: number;
+  panelConfigId: number;
+  startTime: number;
+  endTime: number;
+  closedEarly: boolean;
+  createdAt: number;
+};
+
+export type ScheduleWindowPayload = {
+  startTime: number;
+  endTime: number;
 };
 
 export type MultiPanelDetail = {
