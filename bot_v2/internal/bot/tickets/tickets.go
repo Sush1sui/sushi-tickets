@@ -130,6 +130,15 @@ func checkScheduleWindow(ctx context.Context, panelID int32) error {
 }
 
 func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32) {
+	if err := checkScheduleWindow(context.Background(), panelID); err != nil {
+		var werr *errWindowClosed
+		if errors.As(err, &werr) {
+			respondEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
+			return
+		}
+		log.Printf("schedule window check failed: %v", err)
+	}
+
 	modalTitle, questions, err := loadPanelQuestions(panelID)
 	if err != nil {
 		log.Printf("load questions failed: %v", err)
