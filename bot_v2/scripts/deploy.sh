@@ -11,6 +11,7 @@ git -C "$DIR" fetch origin
 git -C "$DIR" rev-parse HEAD | grep -q "$SHA" || git -C "$DIR" pull --ff-only
 cd "$DIR/bot_v2"
 [ -f api ] && cp -f api api.prev
+go run ./cmd/migrate
 go build -o api ./cmd/api
 sudo systemctl restart sushi-tickets.service
 for i in $(seq 1 12); do
