@@ -1,6 +1,9 @@
 package panels
 
-import "github.com/Sush1sui/FNS_BOT/internal/db"
+import (
+	"github.com/Sush1sui/FNS_BOT/internal/db"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 // QuestionItem represents a single panel question with style, placeholder, and required flag.
 type QuestionItem struct {
@@ -11,24 +14,26 @@ type QuestionItem struct {
 }
 
 type Handler struct {
-	DB *db.Queries
+	DB   *db.Queries
+	Pool *pgxpool.Pool
 }
 
 type PanelPayload struct {
-	MentionRolesOnOpen  []string              `json:"mentionRolesOnOpen"`
-	CategoryID          string                `json:"categoryId"`
-	Title               string                `json:"title"`
-	Content             string                `json:"content"`
-	EmbedColor          int32                 `json:"embedColor"`
-	ChannelID           string                `json:"channelId"`
-	BtnColor            string                `json:"btnColor"`
-	BtnTxt              string                `json:"btnTxt"`
-	BtnEmoji            string                `json:"btnEmoji"`
-	LargeImgUrl         string                `json:"largeImgUrl"`
-	SmallImgUrl         string                `json:"smallImgUrl"`
-	Questions           []QuestionItem        `json:"questions"`
-	QuestionsModalTitle string                `json:"questionsModalTitle,omitempty"`
-	WelcomeMessage      WelcomeMessagePayload `json:"welcomeMessage"`
+	MentionRolesOnOpen  []string                 `json:"mentionRolesOnOpen"`
+	CategoryID          string                   `json:"categoryId"`
+	Title               string                   `json:"title"`
+	Content             string                   `json:"content"`
+	EmbedColor          int32                    `json:"embedColor"`
+	ChannelID           string                   `json:"channelId"`
+	BtnColor            string                   `json:"btnColor"`
+	BtnTxt              string                   `json:"btnTxt"`
+	BtnEmoji            string                   `json:"btnEmoji"`
+	LargeImgUrl         string                   `json:"largeImgUrl"`
+	SmallImgUrl         string                   `json:"smallImgUrl"`
+	Questions           []QuestionItem           `json:"questions"`
+	QuestionsModalTitle string                   `json:"questionsModalTitle,omitempty"`
+	WelcomeMessage      WelcomeMessagePayload    `json:"welcomeMessage"`
+	ScheduleWindows     *[]ScheduleWindowSync    `json:"scheduleWindows,omitempty"`
 }
 
 type WelcomeMessagePayload struct {
@@ -53,6 +58,13 @@ type MultiPanelPayload struct {
 	PanelConfigIds []int32 `json:"panelConfigIds"`
 	Footer         string  `json:"footer"`
 	FootIconUrl    string  `json:"footIconUrl"`
+}
+
+type ScheduleWindowSync struct {
+	ID          int64 `json:"id,omitempty"`
+	StartTime   int64 `json:"startTime"`
+	EndTime     int64 `json:"endTime"`
+	ClosedEarly bool  `json:"closedEarly,omitempty"`
 }
 
 type ScheduleWindowPayload struct {

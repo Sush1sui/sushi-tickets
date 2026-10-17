@@ -49,7 +49,7 @@ func main() {
 	tickets.SetStorage(fileClient)
 
 	// 3. Mount Router
-	mux := api.NewRouter(queries, fileClient, cfg)
+	mux := api.NewRouter(queries, fileClient, cfg, pool)
 
 	// 4. Start Bot
 	bot.StartBot()

@@ -13,9 +13,10 @@ import (
 	"github.com/Sush1sui/FNS_BOT/internal/config"
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/Sush1sui/FNS_BOT/internal/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(queries *db.Queries, storageClient *storage.Client, cfg *config.Config) http.Handler {
+func NewRouter(queries *db.Queries, storageClient *storage.Client, cfg *config.Config, pool *pgxpool.Pool) http.Handler {
 	s := &Server{
 		DB:      queries,
 		Storage: storageClient,
@@ -27,7 +28,7 @@ func NewRouter(queries *db.Queries, storageClient *storage.Client, cfg *config.C
 
 	configHandler := &serverconfig.Handler{DB: queries}
 	authHandler := &auth.Handler{Server: s}
-	panelsHandler := &panels.Handler{DB: queries}
+	panelsHandler := &panels.Handler{DB: queries, Pool: pool}
 	transcriptsHandler := &transcripts.Handler{DB: queries, Storage: s.Storage}
 
 	mux := http.NewServeMux()

@@ -54,7 +54,20 @@ const fetchApi = async <T>(
   });
 
   if (!res.ok) {
-    throw new Error(`API error: ${res.status}`);
+    let detail = "";
+    try {
+      const body = await res.json();
+      if (typeof body?.error === "string") detail = body.error;
+      if (body?.fields && typeof body.fields === "object") {
+        const fieldMsgs = Object.entries(body.fields as Record<string, unknown>)
+          .map(([field, msg]) => `${field}: ${String(msg)}`)
+          .join("; ");
+        if (fieldMsgs) detail = `${detail} — ${fieldMsgs}`;
+      }
+    } catch {
+      // ignore non-JSON bodies
+    }
+    throw new Error(`API error: ${res.status}${detail ? ` ${detail}` : ""}`);
   }
 
   return res.json() as Promise<T>;
@@ -135,52 +148,6 @@ export const api = {
     list: (serverId: string, panelId: string) =>
       fetchApi<ScheduleWindow[]>(
         `/api/servers/${serverId}/panels/${panelId}/schedule`,
-      ),
-    create: (
-      serverId: string,
-      panelId: string,
-      payload: ScheduleWindowPayload,
-    ) =>
-      fetchApi<ScheduleWindow>(
-        `/api/servers/${serverId}/panels/${panelId}/schedule`,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-      ),
-    update: (
-      serverId: string,
-      panelId: string,
-      windowId: string,
-      payload: ScheduleWindowPayload,
-    ) =>
-      fetchApi<ScheduleWindow>(
-        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}`,
-        {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        },
-      ),
-    delete: (serverId: string, panelId: string, windowId: string) =>
-      fetchApi<{ status: string }>(
-        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}`,
-        {
-          method: "DELETE",
-        },
-      ),
-    close: (serverId: string, panelId: string, windowId: string) =>
-      fetchApi<ScheduleWindow>(
-        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}/close`,
-        {
-          method: "POST",
-        },
-      ),
-    reopen: (serverId: string, panelId: string, windowId: string) =>
-      fetchApi<ScheduleWindow>(
-        `/api/servers/${serverId}/panels/${panelId}/schedule/${windowId}/open`,
-        {
-          method: "POST",
-        },
       ),
   },
 
@@ -352,6 +319,7 @@ export type CreatePanelPayload = {
   questions: QuestionItem[];
   questionsModalTitle?: string;
   welcomeMessage: WelcomeMessagePayload;
+  scheduleWindows?: ScheduleWindowSyncPayload[];
 };
 
 export type PanelDetail = {
@@ -419,9 +387,18 @@ export type ScheduleWindow = {
   createdAt: number;
 };
 
-export type ScheduleWindowPayload = {
+export type ScheduleWindowDraft = {
+  id?: number;
   startTime: number;
   endTime: number;
+  closedEarly: boolean;
+};
+
+export type ScheduleWindowSyncPayload = {
+  id?: number;
+  startTime: number;
+  endTime: number;
+  closedEarly?: boolean;
 };
 
 export type MultiPanelDetail = {

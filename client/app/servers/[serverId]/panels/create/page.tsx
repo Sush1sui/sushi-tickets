@@ -3,9 +3,17 @@
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { api, type DiscordEmoji, type DiscordRole, type QuestionItem } from "../../../../../lib/api";
+import {
+	api,
+	type DiscordEmoji,
+	type DiscordRole,
+	type QuestionItem,
+	type ScheduleWindowDraft,
+	type ScheduleWindowSyncPayload,
+} from "../../../../../lib/api";
 import EmojiPicker from "@/components/emoji-picker";
 import DiscordMockup from "@/components/DiscordMockup";
+import ScheduleWindows from "@/components/ScheduleWindows";
 import { useGuildEmojis, useGuildMeta } from "../../../../../lib/hooks/useGuildMeta";
 import {
 	DarkInput,
@@ -51,6 +59,7 @@ type PanelForm = {
 	customEmojiToken: string;
 	largeImageUrl: string;
 	smallImageUrl: string;
+	scheduleWindows: ScheduleWindowDraft[];
 };
 
 export default function CreatePanelPage() {
@@ -85,6 +94,7 @@ export default function CreatePanelPage() {
 		customEmojiToken: "",
 		largeImageUrl: "",
 		smallImageUrl: "",
+		scheduleWindows: [],
 	});
 
 	const { roles, channels, categories, isLoading } = useGuildMeta(serverId);
@@ -94,6 +104,7 @@ export default function CreatePanelPage() {
 		form.customEmoji,
 	);
 	const [saving, setSaving] = useState(false);
+	const [saveError, setSaveError] = useState<string | null>(null);
 	const [previewTab, setPreviewTab] = useState<"panel" | "welcome">("panel");
 
 	const sortedRoles = useMemo(
@@ -124,6 +135,7 @@ export default function CreatePanelPage() {
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		setSaving(true);
+		setSaveError(null);
 		try {
 			const embedColor = parseInt(form.color.replace("#", ""), 16) || 0;
 			const emojiValue = form.customEmoji
@@ -162,9 +174,20 @@ export default function CreatePanelPage() {
 					footerText: form.welcomeMessage.footerText,
 					footerIconUrl: form.welcomeMessage.footerIconUrl,
 				},
+				scheduleWindows: form.scheduleWindows.map(
+					(w): ScheduleWindowSyncPayload => ({
+						startTime: w.startTime,
+						endTime: w.endTime,
+						closedEarly: w.closedEarly,
+					}),
+				),
 			});
 
 			router.push(`/servers/${serverId}/panels`);
+		} catch (err) {
+			setSaveError(
+				err instanceof Error ? err.message : "Failed to create panel.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -206,6 +229,12 @@ export default function CreatePanelPage() {
 						<div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
 						<p className="text-xs text-zinc-400 font-bold">Loading server data...</p>
 					</div>
+				</div>
+			)}
+
+			{!isLoading && saveError && (
+				<div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
+					{saveError}
 				</div>
 			)}
 
@@ -357,6 +386,14 @@ export default function CreatePanelPage() {
 							</div>
 						</div>
 					</SectionCard>
+
+					{/* Schedule Windows */}
+					<ScheduleWindows
+						value={form.scheduleWindows}
+						onChange={(windows) =>
+							setForm((p) => ({ ...p, scheduleWindows: windows }))
+						}
+					/>
 
 					{/* Questions */}
 					<SectionCard

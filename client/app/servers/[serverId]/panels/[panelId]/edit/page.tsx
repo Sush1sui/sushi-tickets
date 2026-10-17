@@ -10,6 +10,8 @@ import {
 	type DiscordRole,
 	type PanelDetail,
 	type QuestionItem,
+	type ScheduleWindowDraft,
+	type ScheduleWindowSyncPayload,
 } from "../../../../../../lib/api";
 import EmojiPicker from "@/components/emoji-picker";
 import DiscordMockup from "@/components/DiscordMockup";
@@ -72,6 +74,8 @@ type PanelForm = {
 	customEmojiToken: string;
 	largeImageUrl: string;
 	smallImageUrl: string;
+	// undefined = schedule not loaded yet (never sent to the API on save)
+	scheduleWindows?: ScheduleWindowDraft[];
 };
 
 const toHex = (value: number, fallback: string) => {
@@ -153,6 +157,17 @@ export default function EditPanelPage() {
 		{ revalidateOnFocus: false },
 	);
 
+	// Fetch-once: no auto refetch, so a stale fetch never overwrites staged edits
+	const { data: scheduleWindows } = useSWR(
+		`panel-schedule:${serverId}:${panelId}`,
+		() => api.panelSchedule.list(serverId, panelId),
+		{
+			revalidateIfStale: false,
+			revalidateOnFocus: false,
+			revalidateOnReconnect: false,
+		},
+	);
+
 	const { roles, channels, categories, isLoading: metaLoading } = useGuildMeta(serverId);
 	const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 	const { emojis, isLoading: emojisLoading } = useGuildEmojis(
@@ -160,6 +175,7 @@ export default function EditPanelPage() {
 		form.customEmoji,
 	);
 	const [saving, setSaving] = useState(false);
+	const [saveError, setSaveError] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [previewTab, setPreviewTab] = useState<"panel" | "welcome">("panel");
 	const [modalOpen, setModalOpen] = useState(false);
@@ -206,8 +222,18 @@ export default function EditPanelPage() {
 			customEmojiToken: parsedEmoji.token,
 			largeImageUrl: panel.largeImgUrl ?? "",
 			smallImageUrl: panel.smallImgUrl ?? "",
+			scheduleWindows: scheduleWindows
+				? scheduleWindows.map(
+						(w): ScheduleWindowDraft => ({
+							id: w.id,
+							startTime: w.startTime,
+							endTime: w.endTime,
+							closedEarly: w.closedEarly,
+						}),
+					)
+				: undefined,
 		});
-	}, [panel]);
+	}, [panel, scheduleWindows]);
 
 	const sortedRoles = useMemo(() => {
 		return [...roles].sort((a, b) => b.position - a.position);
@@ -235,6 +261,7 @@ export default function EditPanelPage() {
 	const handleSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
 		setSaving(true);
+		setSaveError(null);
 
 		try {
 			const embedColor = parseInt(form.color.replace("#", ""), 16) || 0;
@@ -262,21 +289,37 @@ export default function EditPanelPage() {
 						style: q.style || "short",
 						placeholder: q.placeholder?.trim() || "",
 					})),
-				questionsModalTitle: form.questionsModalTitle.trim() || "Sushi Ticket Questions",
-				welcomeMessage: {
-					embedColor:
-						parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
-					title: form.welcomeMessage.title,
-					description: form.welcomeMessage.description,
-					titleUrl: form.welcomeMessage.titleUrl,
-					largeImgUrl: form.welcomeMessage.largeImgUrl,
-					smallImgUrl: form.welcomeMessage.smallImgUrl,
-					footerText: form.welcomeMessage.footerText,
-					footerIconUrl: form.welcomeMessage.footerIconUrl,
-				},
-			});
+			questionsModalTitle: form.questionsModalTitle.trim() || "Sushi Ticket Questions",
+			welcomeMessage: {
+				embedColor:
+					parseInt(form.welcomeMessage.embedColor.replace("#", ""), 16) || 0,
+				title: form.welcomeMessage.title,
+				description: form.welcomeMessage.description,
+				titleUrl: form.welcomeMessage.titleUrl,
+				largeImgUrl: form.welcomeMessage.largeImgUrl,
+				smallImgUrl: form.welcomeMessage.smallImgUrl,
+				footerText: form.welcomeMessage.footerText,
+				footerIconUrl: form.welcomeMessage.footerIconUrl,
+			},
+			...(form.scheduleWindows
+				? {
+						scheduleWindows: form.scheduleWindows.map(
+							(w): ScheduleWindowSyncPayload => ({
+								...(w.id !== undefined ? { id: w.id } : {}),
+								startTime: w.startTime,
+								endTime: w.endTime,
+								closedEarly: w.closedEarly,
+							}),
+						),
+					}
+				: {}),
+		});
 
 			router.push(`/servers/${serverId}/panels`);
+		} catch (err) {
+			setSaveError(
+				err instanceof Error ? err.message : "Failed to save panel.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -350,6 +393,12 @@ export default function EditPanelPage() {
 						<div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
 						<p className="text-xs text-zinc-500">Loading panel data...</p>
 					</div>
+				</div>
+			)}
+
+			{!isLoading && saveError && (
+				<div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
+					{saveError}
 				</div>
 			)}
 
@@ -498,7 +547,12 @@ export default function EditPanelPage() {
 						</SectionCard>
 
 						{/* Schedule Windows */}
-						<ScheduleWindows serverId={serverId} panelId={panelId} />
+						<ScheduleWindows
+							value={form.scheduleWindows ?? []}
+							onChange={(windows) =>
+								setForm((p) => ({ ...p, scheduleWindows: windows }))
+							}
+						/>
 
 						{/* Questions */}
 						<SectionCard

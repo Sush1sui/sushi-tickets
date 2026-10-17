@@ -14,6 +14,7 @@ import (
 	"github.com/Sush1sui/FNS_BOT/internal/utils"
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func init() {
@@ -296,6 +297,12 @@ func (h *Handler) HandleCreatePanel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save welcome message"})
 		return
 	}
+	if payload.ScheduleWindows != nil {
+		if httpStatus, msg := applyScheduleSync(w, h.Pool, item.ID, *payload.ScheduleWindows); httpStatus != 0 {
+			writeJSON(w, httpStatus, msg)
+			return
+		}
+	}
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -384,6 +391,12 @@ func (h *Handler) HandleUpdatePanel(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save welcome message"})
 		return
+	}
+	if payload.ScheduleWindows != nil {
+		if httpStatus, msg := applyScheduleSync(w, h.Pool, panelID, *payload.ScheduleWindows); httpStatus != 0 {
+			writeJSON(w, httpStatus, msg)
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, item)
 }
@@ -701,5 +714,23 @@ func toWelcomeParams(msg WelcomeMessagePayload) db.WelcomeMessageParams {
 		msg.FooterText,
 		msg.FooterIconUrl,
 	)
+}
+
+func applyScheduleSync(w http.ResponseWriter, pool *pgxpool.Pool, panelID int32, desired []ScheduleWindowSync) (int, any) {
+	if pool == nil {
+		return http.StatusInternalServerError, map[string]string{"error": "pool not available"}
+	}
+	if err := syncScheduleWindows(context.Background(), pool, panelID, desired); err != nil {
+		var verr *errScheduleValidation
+		if errors.As(err, &verr) {
+			return http.StatusBadRequest, map[string]any{
+				"error":  "schedule validation failed",
+				"fields": map[string]string{verr.Field: verr.Msg},
+			}
+		}
+		log.Printf("sync schedule windows failed: %v", err)
+		return http.StatusInternalServerError, map[string]string{"error": "failed to save schedule windows"}
+	}
+	return 0, nil
 }
 
