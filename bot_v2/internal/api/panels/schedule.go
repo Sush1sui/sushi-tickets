@@ -67,10 +67,6 @@ func validateScheduleTimes(startTime, endTime int64) (string, string) {
 	if endTime <= startTime {
 		return "endTime", "endTime must be after startTime"
 	}
-	// Allow a small grace so admins can open a window "now".
-	if startTime < now-300 {
-		return "startTime", "startTime must not be in the past"
-	}
 	return "", ""
 }
 
@@ -143,10 +139,6 @@ func syncScheduleWindows(ctx context.Context, pool *pgxpool.Pool, panelID int32,
 				rollback()
 				return &errScheduleValidation{Field: "endTime", Msg: "endTime must be in the future"}
 			}
-			if w.StartTime < now-300 {
-				rollback()
-				return &errScheduleValidation{Field: "startTime", Msg: "startTime must not be in the past"}
-			}
 			continue
 		}
 		existing := byID[w.ID]
@@ -156,10 +148,6 @@ func syncScheduleWindows(ctx context.Context, pool *pgxpool.Pool, panelID int32,
 		if w.EndTime <= now {
 			rollback()
 			return &errScheduleValidation{Field: "endTime", Msg: "endTime must be in the future"}
-		}
-		if w.StartTime < now-300 {
-			rollback()
-			return &errScheduleValidation{Field: "startTime", Msg: "startTime must not be in the past"}
 		}
 	}
 

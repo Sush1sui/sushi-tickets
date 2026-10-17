@@ -188,6 +188,7 @@ export default function CreatePanelPage() {
 			setSaveError(
 				err instanceof Error ? err.message : "Failed to create panel.",
 			);
+			window.scrollTo({ top: 0, behavior: "smooth" });
 		} finally {
 			setSaving(false);
 		}

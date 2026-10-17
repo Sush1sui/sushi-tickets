@@ -320,6 +320,7 @@ export default function EditPanelPage() {
 			setSaveError(
 				err instanceof Error ? err.message : "Failed to save panel.",
 			);
+			window.scrollTo({ top: 0, behavior: "smooth" });
 		} finally {
 			setSaving(false);
 		}
