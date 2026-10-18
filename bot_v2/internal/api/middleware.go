@@ -43,7 +43,9 @@ func LimitRequestBody(next http.Handler) http.Handler {
 	})
 }
 
-// EnableCORS allows your React frontend to communicate with this Go API
+// EnableCORS allows your React frontend to communicate with this Go API.
+// It also handles Chrome's Private Network Access (PNA) preflight:
+// https://developer.chrome.com/blog/private-network-access-preflight/
 func EnableCORS(next http.Handler, allowedOrigin string, allowCredentials bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -57,6 +59,12 @@ func EnableCORS(next http.Handler, allowedOrigin string, allowCredentials bool) 
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Idempotency-Key, X-CSRF-Token")
+
+		// Chrome Private Network Access: echo back the PNA header on preflight
+		// so the browser doesn't show the "access local network" permission prompt.
+		if r.Header.Get("Access-Control-Request-Private-Network") == "true" {
+			w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		}
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
