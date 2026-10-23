@@ -243,12 +243,12 @@ export type ServerConfig = {
   TicketPermissionsAddReactions: boolean;
   AutoClose: boolean;
   AutoCloseOnUserLeave: boolean;
-  AutoCloseNoResponseDays: number;
-  AutoCloseNoResponseHours: number;
-  AutoCloseNoResponseMins: number;
-  AutoCloseSinceLastMessageDays: number;
-  AutoCloseSinceLastMessageHours: number;
-  AutoCloseSinceLastMessageMins: number;
+  AutoCloseNoResponseDays: number | null;
+  AutoCloseNoResponseHours: number | null;
+  AutoCloseNoResponseMins: number | null;
+  AutoCloseSinceLastMessageDays: number | null;
+  AutoCloseSinceLastMessageHours: number | null;
+  AutoCloseSinceLastMessageMins: number | null;
 };
 
 type ServerConfigResponse =

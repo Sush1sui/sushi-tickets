@@ -13,25 +13,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-
-
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
 
+func validateOptionalIntRange(value *int, field string, min, max int, errs utils.ValidationErrors) {
+	if value == nil {
+		return
+	}
+	utils.ValidateIntRange(*value, field, min, max, errs)
+}
+
 func validateServerConfigForm(f FormData) utils.ValidationErrors {
 	errs := make(utils.ValidationErrors)
 	utils.ValidateMaxLength(f.TicketNameStyle, "TicketNameStyle", 32, errs)
 	utils.ValidateIntRange(f.MaxTicketsPerUser, "MaxTicketsPerUser", 1, 100, errs)
-	utils.ValidateIntRange(f.AutoCloseNoResponseDays, "AutoCloseNoResponseDays", 0, 365, errs)
-	utils.ValidateIntRange(f.AutoCloseNoResponseHours, "AutoCloseNoResponseHours", 0, 23, errs)
-	utils.ValidateIntRange(f.AutoCloseNoResponseMins, "AutoCloseNoResponseMins", 0, 59, errs)
-	utils.ValidateIntRange(f.AutoCloseSinceLastMessageDays, "AutoCloseSinceLastMessageDays", 0, 365, errs)
-	utils.ValidateIntRange(f.AutoCloseSinceLastMessageHours, "AutoCloseSinceLastMessageHours", 0, 23, errs)
-	utils.ValidateIntRange(f.AutoCloseSinceLastMessageMins, "AutoCloseSinceLastMessageMins", 0, 59, errs)
+	validateOptionalIntRange(f.AutoCloseNoResponseDays, "AutoCloseNoResponseDays", 0, 365, errs)
+	validateOptionalIntRange(f.AutoCloseNoResponseHours, "AutoCloseNoResponseHours", 0, 23, errs)
+	validateOptionalIntRange(f.AutoCloseNoResponseMins, "AutoCloseNoResponseMins", 0, 59, errs)
+	validateOptionalIntRange(f.AutoCloseSinceLastMessageDays, "AutoCloseSinceLastMessageDays", 0, 365, errs)
+	validateOptionalIntRange(f.AutoCloseSinceLastMessageHours, "AutoCloseSinceLastMessageHours", 0, 23, errs)
+	validateOptionalIntRange(f.AutoCloseSinceLastMessageMins, "AutoCloseSinceLastMessageMins", 0, 59, errs)
 	return errs
+}
+
+func totalMinutes(days, hours, mins *int) int {
+	total := 0
+	if days != nil {
+		total += *days * 24 * 60
+	}
+	if hours != nil {
+		total += *hours * 60
+	}
+	if mins != nil {
+		total += *mins
+	}
+	return total
+}
+
+func optionalMinutes(total int) pgtype.Int4 {
+	if total <= 0 {
+		return pgtype.Int4{}
+	}
+	return pgtype.Int4{Int32: int32(total), Valid: true}
+}
+
+func splitMinutes(total pgtype.Int4) (days, hours, mins *int) {
+	if !total.Valid || total.Int32 <= 0 {
+		return nil, nil, nil
+	}
+
+	remaining := int(total.Int32)
+	dayValue := remaining / (24 * 60)
+	remaining %= 24 * 60
+	hourValue := remaining / 60
+	minuteValue := remaining % 60
+
+	return &dayValue, &hourValue, &minuteValue
 }
 
 func (h *Handler) HandleGetServerConfig(w http.ResponseWriter, r *http.Request) {
@@ -45,18 +85,30 @@ func (h *Handler) HandleGetServerConfig(w http.ResponseWriter, r *http.Request) 
 	}
 
 	config, _ := h.DB.GetServerConfig(context.Background(), serverID)
+	responseConfig := ServerConfigResponse{ServerConfig: config}
+
+	if autoClose, err := h.DB.GetAutoCloseConfig(context.Background(), serverID); err == nil {
+		responseConfig.AutoClose = autoClose.IsActive
+		responseConfig.AutoCloseOnUserLeave = autoClose.CloseOnUserLeave
+		responseConfig.AutoCloseNoResponseDays,
+			responseConfig.AutoCloseNoResponseHours,
+			responseConfig.AutoCloseNoResponseMins = splitMinutes(autoClose.CloseSinceOpenWithNoResponseMins)
+		responseConfig.AutoCloseSinceLastMessageDays,
+			responseConfig.AutoCloseSinceLastMessageHours,
+			responseConfig.AutoCloseSinceLastMessageMins = splitMinutes(autoClose.CloseSinceLastMessageMins)
+	}
 
 	if showChannels {
 		channels, _ := utils.GetGuildChannelsCache(bot.Session, serverIDStr)
 		response := map[string]any{
-			"config":   config,
+			"config":   responseConfig,
 			"channels": channels,
 		}
 		writeJSON(w, http.StatusOK, response)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, config)
+	writeJSON(w, http.StatusOK, responseConfig)
 }
 
 func (h *Handler) HandleUpdateServerConfig(w http.ResponseWriter, r *http.Request) {
@@ -106,17 +158,26 @@ func (h *Handler) HandleUpdateServerConfig(w http.ResponseWriter, r *http.Reques
 	}
 	_ = cfg // use cfg to ensure it's read
 
-	// Convert days/hours/mins to total minutes
-	noResponseMins := int32((form.AutoCloseNoResponseDays * 24 * 60) + (form.AutoCloseNoResponseHours * 60) + form.AutoCloseNoResponseMins)
-	sinceLastMessageMins := int32((form.AutoCloseSinceLastMessageDays * 24 * 60) + (form.AutoCloseSinceLastMessageHours * 60) + form.AutoCloseSinceLastMessageMins)
+	// Convert days/hours/mins to total minutes. Empty, zero, and negative
+	// durations are intentionally stored as NULL.
+	noResponseMins := optionalMinutes(totalMinutes(
+		form.AutoCloseNoResponseDays,
+		form.AutoCloseNoResponseHours,
+		form.AutoCloseNoResponseMins,
+	))
+	sinceLastMessageMins := optionalMinutes(totalMinutes(
+		form.AutoCloseSinceLastMessageDays,
+		form.AutoCloseSinceLastMessageHours,
+		form.AutoCloseSinceLastMessageMins,
+	))
 
 	// Upsert auto close config
 	_, err = h.DB.UpsertAutoCloseConfig(context.Background(), db.UpsertAutoCloseConfigParams{
 		ServerConfigID:                   serverID,
 		IsActive:                         form.AutoClose,
 		CloseOnUserLeave:                 form.AutoCloseOnUserLeave,
-		CloseSinceOpenWithNoResponseMins: pgtype.Int4{Int32: noResponseMins, Valid: true},
-		CloseSinceLastMessageMins:        pgtype.Int4{Int32: sinceLastMessageMins, Valid: true},
+		CloseSinceOpenWithNoResponseMins: noResponseMins,
+		CloseSinceLastMessageMins:        sinceLastMessageMins,
 	})
 	if err != nil {
 		log.Printf("failed to save auto close config: %v", err)

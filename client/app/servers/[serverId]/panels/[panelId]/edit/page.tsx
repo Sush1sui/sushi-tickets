@@ -16,6 +16,9 @@ import {
 import EmojiPicker from "@/components/emoji-picker";
 import DiscordMockup from "@/components/DiscordMockup";
 import DarkConfirmModal from "@/components/DarkConfirmModal";
+import PreFlightQuestions, {
+	PreFlightPreview,
+} from "@/components/PreFlightQuestions";
 import {
 	useGuildEmojis,
 	useGuildMeta,
@@ -29,7 +32,7 @@ import {
 	FormLabel,
 } from "../../../../../../components/DarkFormFields";
 import ScheduleWindows from "../../../../../../components/ScheduleWindows";
-import { Save, Plus, Trash2, Trash } from "lucide-react";
+import { Save, Trash } from "lucide-react";
 
 const buttonColorOptions = [
 	{ value: "primary", label: "Blue" },
@@ -74,8 +77,6 @@ type PanelForm = {
 	customEmojiToken: string;
 	largeImageUrl: string;
 	smallImageUrl: string;
-	// undefined = schedule not loaded yet (never sent to the API on save)
-	scheduleWindows?: ScheduleWindowDraft[];
 };
 
 const toHex = (value: number, fallback: string) => {
@@ -123,7 +124,7 @@ export default function EditPanelPage() {
 		categoryId: "",
 		title: "",
 		content: "",
-		questions: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+		questions: [],
 		questionsModalTitle: "Sushi Ticket Questions",
 		welcomeMessage: {
 			embedColor: "#57f287",
@@ -177,7 +178,9 @@ export default function EditPanelPage() {
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState(false);
-	const [previewTab, setPreviewTab] = useState<"panel" | "welcome">("panel");
+	const [previewTab, setPreviewTab] = useState<"panel" | "welcome" | "questions">(
+		"panel",
+	);
 	const [modalOpen, setModalOpen] = useState(false);
 
 	const isLoading = panelLoading || metaLoading;
@@ -193,14 +196,13 @@ export default function EditPanelPage() {
 			categoryId: panel.categoryId ?? "",
 			title: panel.title ?? "",
 			content: panel.content ?? "",
-			questions: panel.questions?.length
-				? panel.questions.map((q) => ({
-						label: q.label,
-						isRequired: q.isRequired,
-						style: q.style || "short",
-						placeholder: q.placeholder || "",
-					}))
-				: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
+			questions:
+				panel.questions?.map((q) => ({
+					label: q.label,
+					isRequired: q.isRequired,
+					style: q.style || "short",
+					placeholder: q.placeholder || "",
+				})) ?? [],
 			questionsModalTitle: panel.questionsModalTitle || "Sushi Ticket Questions",
 			welcomeMessage: {
 				embedColor: toHex(welcome?.embedColor ?? 0, "#57f287"),
@@ -222,18 +224,25 @@ export default function EditPanelPage() {
 			customEmojiToken: parsedEmoji.token,
 			largeImageUrl: panel.largeImgUrl ?? "",
 			smallImageUrl: panel.smallImgUrl ?? "",
-			scheduleWindows: scheduleWindows
-				? scheduleWindows.map(
-						(w): ScheduleWindowDraft => ({
-							id: w.id,
-							startTime: w.startTime,
-							endTime: w.endTime,
-							closedEarly: w.closedEarly,
-						}),
-					)
-				: undefined,
 		});
-	}, [panel, scheduleWindows]);
+	}, [panel]);
+
+	const [scheduleDraft, setScheduleDraft] = useState<
+		ScheduleWindowDraft[] | null
+	>(null);
+
+	const scheduleValue = useMemo(() => {
+		if (scheduleDraft) return scheduleDraft;
+		if (!Array.isArray(scheduleWindows)) return undefined;
+		return scheduleWindows.map(
+			(w): ScheduleWindowDraft => ({
+				id: w.id,
+				startTime: w.startTime,
+				endTime: w.endTime,
+				closedEarly: w.closedEarly,
+			}),
+		);
+	}, [scheduleDraft, scheduleWindows]);
 
 	const sortedRoles = useMemo(() => {
 		return [...roles].sort((a, b) => b.position - a.position);
@@ -301,9 +310,9 @@ export default function EditPanelPage() {
 				footerText: form.welcomeMessage.footerText,
 				footerIconUrl: form.welcomeMessage.footerIconUrl,
 			},
-			...(form.scheduleWindows
+			...(scheduleValue
 				? {
-						scheduleWindows: form.scheduleWindows.map(
+						scheduleWindows: scheduleValue.map(
 							(w): ScheduleWindowSyncPayload => ({
 								...(w.id !== undefined ? { id: w.id } : {}),
 								startTime: w.startTime,
@@ -548,166 +557,22 @@ export default function EditPanelPage() {
 
 						{/* Schedule Windows */}
 						<ScheduleWindows
-							value={form.scheduleWindows ?? []}
-							onChange={(windows) =>
-								setForm((p) => ({ ...p, scheduleWindows: windows }))
-							}
+							value={scheduleValue ?? []}
+							onChange={setScheduleDraft}
+							loading={scheduleValue === undefined}
 						/>
 
 						{/* Questions */}
-						<SectionCard
-							title="Pre-Flight Questions"
-							description="Users will fill these out before a ticket is created."
-							action={
-								<button
-									type="button"
-									onClick={() =>
-										setForm((p) => ({
-											...p,
-											questions: [
-												...p.questions,
-												{ label: "", isRequired: false, style: "short", placeholder: "" },
-											],
-										}))
-									}
-									className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-zinc-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer "
-								>
-									<Plus className="h-3.5 w-3.5" />
-									Add Question
-								</button>
+						<PreFlightQuestions
+							value={form.questions}
+							onChange={(questions) =>
+								setForm((p) => ({ ...p, questions }))
 							}
-						>
-							<div className="space-y-4">
-								<FormLabel label="Modal Window Title" hint="Max 45 chars (popup header)">
-									<DarkInput
-										value={form.questionsModalTitle}
-										onChange={(e) =>
-											setForm((p) => ({
-												...p,
-												questionsModalTitle: e.target.value.slice(0, 45),
-											}))
-										}
-										placeholder="Sushi Ticket Questions"
-									/>
-								</FormLabel>
-
-								<div className="pt-2 border-t border-white/5 space-y-3">
-								{form.questions.map((question, index) => (
-									<div
-										key={index}
-										className="rounded-md border border-white/5 bg-white/[0.02] p-3.5 space-y-2.5 transition-colors hover:border-white/10"
-									>
-										{/* Top row: number, label, type toggle, required toggle, delete */}
-										<div className="question-row">
-											<span className="text-[13px] font-medium font-mono text-zinc-400 w-5 shrink-0 text-right">
-												{index + 1}.
-											</span>
-											<DarkInput
-												value={question.label}
-												onChange={(e) => {
-													const next = [...form.questions];
-													next[index] = { ...next[index], label: e.target.value };
-													setForm((p) => ({ ...p, questions: next }));
-												}}
-												placeholder={`Question ${index + 1} (e.g. Roblox Username)`}
-												className="min-w-0"
-											/>
-
-											{/* Input Style Toggle */}
-											<div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5 shrink-0">
-												<button
-													type="button"
-													onClick={() => {
-														const next = [...form.questions];
-														next[index] = { ...next[index], style: "short" };
-														setForm((p) => ({ ...p, questions: next }));
-													}}
-													className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-														(question.style || "short") === "short"
-															? "bg-zinc-100 text-zinc-950 "
-															: "text-zinc-400 hover:text-zinc-200"
-													}`}
-													title="Single-line text input"
-												>
-													Single Line
-												</button>
-												<button
-													type="button"
-													onClick={() => {
-														const next = [...form.questions];
-														next[index] = { ...next[index], style: "paragraph" };
-														setForm((p) => ({ ...p, questions: next }));
-													}}
-													className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
-														question.style === "paragraph"
-															? "bg-zinc-100 text-zinc-950 "
-															: "text-zinc-400 hover:text-zinc-200"
-													}`}
-													title="Multi-line textarea"
-												>
-													Text Area
-												</button>
-											</div>
-
-											{/* Required toggle */}
-											<button
-												type="button"
-												onClick={() => {
-													const next = [...form.questions];
-													next[index] = { ...next[index], isRequired: !next[index].isRequired };
-													setForm((p) => ({ ...p, questions: next }));
-												}}
-												title={question.isRequired ? "Mark as optional" : "Mark as required"}
-												className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 cursor-pointer ${
-													question.isRequired
-														? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 "
-														: "bg-white/5 text-zinc-400 border border-white/10 hover:text-zinc-300 hover:border-white/20"
-												}`}
-											>
-												{question.isRequired ? "Required" : "Optional"}
-											</button>
-
-											<button
-												type="button"
-												aria-label={`Remove question ${index + 1}`}
-												onClick={() => {
-													const next = form.questions.filter((_, i) => i !== index);
-													setForm((p) => ({
-														...p,
-														questions: next.length
-															? next
-															: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
-													}));
-												}}
-												className="p-2 rounded-md text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										</div>
-
-										{/* Bottom row: Optional Placeholder */}
-										<div className="min-w-0">
-											<DarkInput
-												value={question.placeholder || ""}
-												onChange={(e) => {
-													const next = [...form.questions];
-													next[index] = { ...next[index], placeholder: e.target.value };
-													setForm((p) => ({ ...p, questions: next }));
-												}}
-												placeholder="Optional placeholder (e.g. Enter your Roblox username...)"
-												className="text-[13px] py-1.5 bg-[#17181a] border-white/5"
-											/>
-										</div>
-									</div>
-								))}
-								{form.questions.length === 0 && (
-									<p className="text-[13px] text-zinc-400 italic text-center py-4">
-										No pre-flight questions. Click &quot;Add Question&quot; above.
-									</p>
-								)}
-								</div>
-							</div>
-						</SectionCard>
+							modalTitle={form.questionsModalTitle}
+							onModalTitleChange={(questionsModalTitle) =>
+								setForm((p) => ({ ...p, questionsModalTitle }))
+							}
+						/>
 
 						{/* Welcome Message */}
 						<SectionCard
@@ -862,7 +727,7 @@ export default function EditPanelPage() {
 							</button>
 						</div>
 
-						<div className="flex items-center justify-between px-2">
+						<div className="flex flex-wrap items-center justify-between gap-2 px-2">
 							<span className="text-[13px] font-medium text-[#FF5A36] ">
 								Live Previews
 							</span>
@@ -890,6 +755,17 @@ export default function EditPanelPage() {
 								>
 									Welcome
 								</button>
+								<button
+									type="button"
+									aria-pressed={previewTab === "questions"}
+									onClick={() => setPreviewTab("questions")}
+									className={`px-4 py-2 rounded-lg transition-colors cursor-pointer font-bold text-xs ${previewTab === "questions"
+										? "bg-zinc-100 text-zinc-950"
+										: "hover:text-zinc-200"
+										}`}
+								>
+									Popup
+								</button>
 							</div>
 						</div>
 
@@ -911,7 +787,7 @@ export default function EditPanelPage() {
 										}
 									]}
 								/>
-							) : (
+							) : previewTab === "welcome" ? (
 								<DiscordMockup
 									authorName="Sushi Tickets"
 									embedTitle={form.welcomeMessage.title || "Ticket Opened"}
@@ -928,6 +804,11 @@ export default function EditPanelPage() {
 										}
 									]}
 								/>
+							) : (
+								<PreFlightPreview
+									title={form.questionsModalTitle}
+									questions={form.questions}
+								/>
 							)}
 						</div>
 
@@ -935,7 +816,9 @@ export default function EditPanelPage() {
 							<p className="text-[13px] text-zinc-400 font-medium leading-relaxed">
 								{previewTab === "panel"
 									? "This preview displays a real-time simulation of exactly how your public ticket panel will render in your Discord channel."
-									: "This preview displays a real-time simulation of exactly how the welcome embed will render in the opened private ticket channel."}
+									: previewTab === "welcome"
+										? "This preview displays a real-time simulation of exactly how the welcome embed will render in the opened private ticket channel."
+										: "This is the popup users answer before their ticket is created. Discord shows the first five questions."}
 							</p>
 						</div>
 					</div>

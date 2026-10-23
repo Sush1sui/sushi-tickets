@@ -15,6 +15,17 @@ import {
   FormLabel,
 } from "../../../components/DarkFormFields";
 
+const timeFieldValue = (value?: number | null) =>
+  value != null && value > 0 ? String(value) : "";
+
+const toOptionalInt = (value: string) => {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const normalizeTimeField = (value: string) =>
+  timeFieldValue(toOptionalInt(value));
+
 type FormData = {
   TicketNameStyle: string;
   TicketTranscripts: string;
@@ -94,12 +105,12 @@ export default function ServerSettingsPage() {
     TicketPermissionsAddReactions: false,
     AutoClose: false,
     AutoCloseOnUserLeave: false,
-    AutoCloseNoResponseDays: "0",
-    AutoCloseNoResponseHours: "0",
-    AutoCloseNoResponseMins: "0",
-    AutoCloseSinceLastMessageDays: "0",
-    AutoCloseSinceLastMessageHours: "0",
-    AutoCloseSinceLastMessageMins: "0",
+    AutoCloseNoResponseDays: "",
+    AutoCloseNoResponseHours: "",
+    AutoCloseNoResponseMins: "",
+    AutoCloseSinceLastMessageDays: "",
+    AutoCloseSinceLastMessageHours: "",
+    AutoCloseSinceLastMessageMins: "",
   });
 
   useEffect(() => {
@@ -123,17 +134,21 @@ export default function ServerSettingsPage() {
         config.TicketPermissionsAddReactions || false,
       AutoClose: config.AutoClose || false,
       AutoCloseOnUserLeave: config.AutoCloseOnUserLeave || false,
-      AutoCloseNoResponseDays: String(config.AutoCloseNoResponseDays ?? 0),
-      AutoCloseNoResponseHours: String(config.AutoCloseNoResponseHours ?? 0),
-      AutoCloseNoResponseMins: String(config.AutoCloseNoResponseMins ?? 0),
-      AutoCloseSinceLastMessageDays: String(
-        config.AutoCloseSinceLastMessageDays ?? 0,
+      AutoCloseNoResponseDays: timeFieldValue(
+        config.AutoCloseNoResponseDays,
       ),
-      AutoCloseSinceLastMessageHours: String(
-        config.AutoCloseSinceLastMessageHours ?? 0,
+      AutoCloseNoResponseHours: timeFieldValue(
+        config.AutoCloseNoResponseHours,
       ),
-      AutoCloseSinceLastMessageMins: String(
-        config.AutoCloseSinceLastMessageMins ?? 0,
+      AutoCloseNoResponseMins: timeFieldValue(config.AutoCloseNoResponseMins),
+      AutoCloseSinceLastMessageDays: timeFieldValue(
+        config.AutoCloseSinceLastMessageDays,
+      ),
+      AutoCloseSinceLastMessageHours: timeFieldValue(
+        config.AutoCloseSinceLastMessageHours,
+      ),
+      AutoCloseSinceLastMessageMins: timeFieldValue(
+        config.AutoCloseSinceLastMessageMins,
       ),
     }));
   }, [config, channels]);
@@ -154,19 +169,46 @@ export default function ServerSettingsPage() {
           typeof formData.MaxTicketsPerUser === "string"
             ? toInt(formData.MaxTicketsPerUser)
             : formData.MaxTicketsPerUser,
-        AutoCloseNoResponseDays: toInt(formData.AutoCloseNoResponseDays),
-        AutoCloseNoResponseHours: toInt(formData.AutoCloseNoResponseHours),
-        AutoCloseNoResponseMins: toInt(formData.AutoCloseNoResponseMins),
-        AutoCloseSinceLastMessageDays: toInt(
+        AutoCloseNoResponseDays: toOptionalInt(
+          formData.AutoCloseNoResponseDays,
+        ),
+        AutoCloseNoResponseHours: toOptionalInt(
+          formData.AutoCloseNoResponseHours,
+        ),
+        AutoCloseNoResponseMins: toOptionalInt(
+          formData.AutoCloseNoResponseMins,
+        ),
+        AutoCloseSinceLastMessageDays: toOptionalInt(
           formData.AutoCloseSinceLastMessageDays,
         ),
-        AutoCloseSinceLastMessageHours: toInt(
+        AutoCloseSinceLastMessageHours: toOptionalInt(
           formData.AutoCloseSinceLastMessageHours,
         ),
-        AutoCloseSinceLastMessageMins: toInt(
+        AutoCloseSinceLastMessageMins: toOptionalInt(
           formData.AutoCloseSinceLastMessageMins,
         ),
       });
+      setFormData((prev) => ({
+        ...prev,
+        AutoCloseNoResponseDays: normalizeTimeField(
+          prev.AutoCloseNoResponseDays,
+        ),
+        AutoCloseNoResponseHours: normalizeTimeField(
+          prev.AutoCloseNoResponseHours,
+        ),
+        AutoCloseNoResponseMins: normalizeTimeField(
+          prev.AutoCloseNoResponseMins,
+        ),
+        AutoCloseSinceLastMessageDays: normalizeTimeField(
+          prev.AutoCloseSinceLastMessageDays,
+        ),
+        AutoCloseSinceLastMessageHours: normalizeTimeField(
+          prev.AutoCloseSinceLastMessageHours,
+        ),
+        AutoCloseSinceLastMessageMins: normalizeTimeField(
+          prev.AutoCloseSinceLastMessageMins,
+        ),
+      }));
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {

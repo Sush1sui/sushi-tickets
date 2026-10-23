@@ -140,51 +140,161 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Beautiful Vertical Menu (Features Section) */}
-        <section className="home-features">
+        <section className="home-features" aria-labelledby="home-features-title">
           <div className="home-feature-heading">
-
-            <h2 className="home-section-title">
+            <h2 className="home-section-title" id="home-features-title">
               Built for server support
             </h2>
+            <p className="home-feature-lead">
+              One ticket carries the panel people click, the staff who can
+              answer, and the conversation you keep.
+            </p>
           </div>
 
-          <div className="home-feature-list">
-            <div className="home-feature">
-              <div>
-                <h3 className="font-bold text-zinc-100 text-base">
-                  Clean Conversation Transcripts
-                </h3>
-                <p className="text-sm text-zinc-300 leading-relaxed mt-2 font-medium">
+          <div className="home-feature-layout">
+            <article className="home-feature home-feature--transcripts">
+              <div className="home-feature-copy">
+                <h3>Clean Conversation Transcripts</h3>
+                <p>
                   Configure a logging channel to automatically save completed
                   ticket chats as beautiful, secure web links.
                 </p>
               </div>
-            </div>
 
-            <div className="home-feature">
-              <div>
-                <h3 className="font-bold text-zinc-100 text-base">
-                  Role & Staff Permissions
-                </h3>
-                <p className="text-sm text-zinc-300 leading-relaxed mt-2 font-medium">
-                  Control access easily. Assign specific Discord roles or staff
-                  members to manage, view, or close active tickets.
+              <div className="home-transcript" data-ui>
+                <div className="home-transcript-head">
+                  <span className="home-transcript-title">#ticket-0142</span>
+                  <span className="home-transcript-state">
+                    Saved to #transcripts
+                  </span>
+                </div>
+
+                <div className="home-transcript-thread">
+                  <div className="home-transcript-message">
+                    <span className="home-transcript-avatar">AR</span>
+                    <div>
+                      <p className="home-transcript-meta">
+                        <span>Ari</span>
+                        <span>10:42</span>
+                      </p>
+                      <p className="home-transcript-text">
+                        I was charged twice for the same order.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="home-transcript-message">
+                    <span className="home-transcript-avatar">MI</span>
+                    <div>
+                      <p className="home-transcript-meta">
+                        <span>Mika</span>
+                        <span>Staff</span>
+                        <span>10:44</span>
+                      </p>
+                      <p className="home-transcript-text">
+                        Refund issued. It should land in 3-5 days.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="home-transcript-message">
+                    <span className="home-transcript-avatar">AR</span>
+                    <div>
+                      <p className="home-transcript-meta">
+                        <span>Ari</span>
+                        <span>10:46</span>
+                      </p>
+                      <p className="home-transcript-text">
+                        Got it, thanks for the quick help.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="home-transcript-foot">
+                  <span>12 messages</span>
+                  <span>3 attachments</span>
+                  <span>Closed by Mika</span>
+                </div>
+              </div>
+            </article>
+
+            <article className="home-feature home-feature--permissions">
+              <div className="home-feature-copy">
+                <h3>Role & Staff Permissions</h3>
+                <p>
+                  Choose which Discord roles or staff members can manage tickets
+                  in this server.
                 </p>
               </div>
-            </div>
 
-            <div className="home-feature">
-              <div>
-                <h3 className="font-bold text-zinc-100 text-base">
-                  Fully Customizable Panels
-                </h3>
-                <p className="text-sm text-zinc-300 leading-relaxed mt-2 font-medium">
+              <div className="home-access" data-ui>
+                <div className="home-access-column">
+                  <div className="home-access-head">
+                    <h4>Authorized Members</h4>
+                    <span>1</span>
+                  </div>
+                  <p className="home-access-description">
+                    Individual users who can manage tickets.
+                  </p>
+                  <div className="home-access-search">Search and add members...</div>
+                  <div className="home-access-chip">
+                    <span className="home-access-avatar">MI</span>
+                    <span className="home-access-name">Mika</span>
+                    <span className="home-access-handle">mika</span>
+                    <span className="home-access-remove" aria-hidden="true">×</span>
+                  </div>
+                </div>
+
+                <div className="home-access-column">
+                  <div className="home-access-head">
+                    <h4>Authorized Roles</h4>
+                    <span>2</span>
+                  </div>
+                  <p className="home-access-description">
+                    Anyone with these roles can manage tickets.
+                  </p>
+                  <div className="home-access-search">Search and add roles...</div>
+                  <div className="home-access-roles">
+                    <div className="home-access-chip">
+                      <span className="home-access-dot home-access-dot--support" />
+                      <span className="home-access-name">Support</span>
+                      <span className="home-access-remove" aria-hidden="true">×</span>
+                    </div>
+                    <div className="home-access-chip">
+                      <span className="home-access-dot home-access-dot--billing" />
+                      <span className="home-access-name">Billing</span>
+                      <span className="home-access-remove" aria-hidden="true">×</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article className="home-feature home-feature--panels">
+              <div className="home-feature-copy">
+                <h3>Fully Customizable Panels</h3>
+                <p>
                   Create custom buttons or selection forms in your server. Route
                   users directly to the right support staff member.
                 </p>
               </div>
-            </div>
+
+              <div className="home-panel-preview">
+                <DiscordMockup
+                  authorName="Sushi Tickets"
+                  embedTitle="How can we help?"
+                  embedDescription="Choose a counter and we'll open a private ticket for you."
+                  embedColor="#FF5A36"
+                  fields={[]}
+                  buttons={[
+                    { label: "Billing", style: "primary" },
+                    { label: "Technical", style: "secondary" },
+                    { label: "Report a user", style: "secondary" },
+                  ]}
+                />
+              </div>
+            </article>
           </div>
         </section>
 

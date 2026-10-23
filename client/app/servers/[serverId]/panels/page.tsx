@@ -6,21 +6,11 @@ import Link from "next/link";
 
 import { api } from "../../../../lib/api";
 import { useMultiPanels, usePanels } from "../../../../lib/hooks/usePanels";
-import {
-	Plus,
-	Send,
-	Pencil,
-	Trash2,
-	LayoutGrid,
-	Layers,
-	Hash,
-} from "lucide-react";
-import { SectionCard } from "../../../../components/DarkFormFields";
+import { Plus, Send, Pencil, Trash2 } from "lucide-react";
 import DarkConfirmModal from "../../../../components/DarkConfirmModal";
 
 function PanelRow({
 	title,
-	channelId,
 	onEdit,
 	onSend,
 	onDelete,
@@ -28,7 +18,6 @@ function PanelRow({
 	deleting,
 }: {
 	title: string;
-	channelId: string;
 	onEdit: () => void;
 	onSend: () => void;
 	onDelete: () => void;
@@ -39,15 +28,11 @@ function PanelRow({
 		<div className="panel-row">
 			<div className="flex-1 min-w-0">
 				<p className="text-sm font-semibold text-zinc-100 truncate">{title}</p>
-				<div className="flex items-center gap-1 mt-0.5">
-					<Hash className="h-3 w-3 text-zinc-400" />
-					<p className="text-[13px] font-mono text-zinc-400 truncate">{channelId}</p>
-				</div>
 			</div>
 			<div className="panel-row-actions">
 				<button
 					onClick={onEdit}
-					className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-1.5 text-[13px] font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-colors"
+					className="flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[13px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/5 hover:text-white"
 				>
 					<Pencil className="h-3 w-3" />
 					Edit
@@ -55,7 +40,7 @@ function PanelRow({
 				<button
 					onClick={onSend}
 					disabled={sending}
-					className="flex items-center gap-1.5 rounded-md bg-white/5 px-3 py-2 text-sm text-zinc-200 hover:bg-white/10 transition-colors disabled:opacity-50"
+					className="flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[13px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/5 hover:text-white disabled:opacity-50"
 				>
 					<Send className="h-3 w-3" />
 					{sending ? "Sending..." : "Send"}
@@ -63,7 +48,7 @@ function PanelRow({
 				<button
 					onClick={onDelete}
 					disabled={deleting}
-					className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-red-300 hover:bg-red-950/40 transition-colors disabled:opacity-50"
+					className="flex min-h-9 items-center gap-1.5 rounded-md border border-red-400/15 bg-red-400/[0.04] px-2.5 py-1.5 text-[13px] font-medium text-red-300 transition-colors hover:border-red-400/30 hover:bg-red-400/10 disabled:opacity-50"
 				>
 					<Trash2 className="h-3 w-3" />
 					{deleting ? "Deleting..." : "Delete"}
@@ -86,6 +71,7 @@ export default function PanelsPage() {
 	const [deletingMultiId, setDeletingMultiId] = useState<number | null>(null);
 	const [sendingId, setSendingId] = useState<number | null>(null);
 	const [sendingMultiId, setSendingMultiId] = useState<number | null>(null);
+	const [panelType, setPanelType] = useState<"single" | "multi">("single");
 
 	// State for custom modal
 	const [modalOpen, setModalOpen] = useState(false);
@@ -185,113 +171,119 @@ export default function PanelsPage() {
 		}
 	};
 
+	const isSingle = panelType === "single";
+	const items = isSingle ? panels : multiPanels;
+	const listLoading = isSingle ? panelsLoading : multiPanelsLoading;
+	const createHref = isSingle
+		? `/servers/${serverId}/panels/create`
+		: `/servers/${serverId}/multi-panels/create`;
+
+	const tabClass = (active: boolean) =>
+		`-mb-px border-b-2 pt-1 pb-3 text-sm font-medium transition-colors ${
+			active
+				? "border-zinc-100 text-zinc-100"
+				: "border-transparent text-zinc-400 hover:text-zinc-200"
+		}`;
+
 	return (
 		<div className="space-y-5 pb-6">
 			{/* Page header */}
 			<div className="mb-2">
 				<h1 className="text-xl font-medium tracking-tight text-white">Ticket Panels</h1>
 				<p className="text-[13px] text-zinc-400 mt-0.5">
-					Panels are buttons posted in your Discord channels that users click to open tickets.
+					Post one ticket button, or a menu of ticket types, in your Discord channels.
 				</p>
 			</div>
 
-			<div className="panels-index grid grid-cols-1 gap-10">
-				{/* Single Panels */}
-				<SectionCard
-					title="Single Panels"
-					description="One button per panel."
-					action={
-						<Link
-							href={`/servers/${serverId}/panels/create`}
-							className="flex min-h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-white transition-colors"
-						>
-							<Plus className="h-3.5 w-3.5" />
-							Create
-						</Link>
-					}
+			<div className="flex gap-6 border-b border-white/10">
+				<button
+					type="button"
+					aria-pressed={isSingle}
+					onClick={() => setPanelType("single")}
+					className={tabClass(isSingle)}
 				>
-					{panelsLoading ? (
-						<div className="flex items-center justify-center py-8">
-							<div className="h-5 w-5 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-						</div>
-					) : panels.length === 0 ? (
-						<div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-							<div className="flex h-12 w-12 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/50">
-								<LayoutGrid className="h-5 w-5 text-zinc-400" />
-							</div>
-							<div>
-								<p className="text-sm font-semibold text-zinc-400">No panels yet</p>
-								<p className="text-[13px] text-zinc-400 mt-0.5">Create your first ticket panel.</p>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-2">
-							{panels.map((panel) => (
-								<PanelRow
-									key={panel.ID}
-									title={panel.Title}
-									channelId={panel.ChannelID}
-									onEdit={() =>
-										(window.location.href = `/servers/${serverId}/panels/${panel.ID}/edit`)
-									}
-									onSend={() => handleSend(panel.ID)}
-									onDelete={() => handleDelete(panel.ID)}
-									sending={sendingId === panel.ID}
-									deleting={deletingId === panel.ID}
-								/>
-							))}
-						</div>
-					)}
-				</SectionCard>
-
-				{/* Multi Panels */}
-				<SectionCard
-					title="Multi Panels"
-					description="Multiple buttons in one panel."
-					action={
-						<Link
-							href={`/servers/${serverId}/multi-panels/create`}
-							className="flex min-h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-white transition-colors"
-						>
-							<Plus className="h-3.5 w-3.5" />
-							Create
-						</Link>
-					}
+					Single panels
+				</button>
+				<button
+					type="button"
+					aria-pressed={!isSingle}
+					onClick={() => setPanelType("multi")}
+					className={tabClass(!isSingle)}
 				>
-					{multiPanelsLoading ? (
-						<div className="flex items-center justify-center py-8">
-							<div className="h-5 w-5 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-						</div>
-					) : multiPanels.length === 0 ? (
-						<div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-							<div className="flex h-12 w-12 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/50">
-								<Layers className="h-5 w-5 text-zinc-400" />
-							</div>
-							<div>
-								<p className="text-sm font-semibold text-zinc-400">No multi panels yet</p>
-								<p className="text-[13px] text-zinc-400 mt-0.5">Group multiple ticket types into one panel.</p>
-							</div>
-						</div>
-					) : (
-						<div className="space-y-2">
-							{multiPanels.map((panel) => (
-								<PanelRow
-									key={panel.ID}
-									title={panel.Title}
-									channelId={panel.ChannelID}
-									onEdit={() =>
-										(window.location.href = `/servers/${serverId}/multi-panels/${panel.ID}/edit`)
-									}
-									onSend={() => handleSendMulti(panel.ID)}
-									onDelete={() => handleDeleteMulti(panel.ID)}
-									sending={sendingMultiId === panel.ID}
-									deleting={deletingMultiId === panel.ID}
-								/>
-							))}
-						</div>
-					)}
-				</SectionCard>
+					Multi panels
+				</button>
 			</div>
+
+			<section className="pt-1">
+				<div className="flex flex-wrap items-start justify-between gap-4">
+					<div className="max-w-2xl">
+						<h2 className="text-[17px] font-medium text-white">
+							{isSingle ? "Single panels" : "Multi panels"}
+						</h2>
+						<p className="mt-1 text-[13px] leading-5 text-zinc-400">
+							{isSingle
+								? "One ticket button in each message. Use this when every ticket starts the same way."
+								: "A menu of ticket types in one message. Each button opens its own queue."}
+						</p>
+					</div>
+					<Link
+						href={createHref}
+						className="flex min-h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-white"
+					>
+						<Plus className="h-3.5 w-3.5" />
+						{isSingle ? "New single panel" : "New multi panel"}
+					</Link>
+				</div>
+
+				<div className="mt-5">
+					{listLoading ? (
+						<div className="flex items-center justify-center border-t border-white/10 py-10">
+							<div className="h-5 w-5 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
+						</div>
+					) : items.length === 0 ? (
+						<div className="border-y border-white/10 py-12 text-center">
+							<p className="text-sm font-medium text-zinc-200">
+								{isSingle ? "No single panels yet" : "No multi panels yet"}
+							</p>
+							<p className="mt-1 text-[13px] text-zinc-400">
+								{isSingle
+									? "Create one with a single ticket button."
+									: "Create one to group several ticket types."}
+							</p>
+						</div>
+					) : (
+						<div className="border-t border-white/10">
+							{items.map((panel) => (
+								<PanelRow
+									key={`${panelType}-${panel.ID}`}
+									title={panel.Title}
+									onEdit={() =>
+										(window.location.href = `/servers/${serverId}/${
+											isSingle ? "panels" : "multi-panels"
+										}/${panel.ID}/edit`)
+									}
+									onSend={() =>
+										isSingle ? handleSend(panel.ID) : handleSendMulti(panel.ID)
+									}
+									onDelete={() =>
+										isSingle ? handleDelete(panel.ID) : handleDeleteMulti(panel.ID)
+									}
+									sending={
+										isSingle
+											? sendingId === panel.ID
+											: sendingMultiId === panel.ID
+									}
+									deleting={
+										isSingle
+											? deletingId === panel.ID
+											: deletingMultiId === panel.ID
+									}
+								/>
+							))}
+						</div>
+					)}
+				</div>
+			</section>
 
 			<DarkConfirmModal
 				isOpen={modalOpen}

@@ -16,11 +16,13 @@ export function DarkInput({
   list,
   type = "text",
   min,
+  maxLength,
   onKeyDown,
   className = "",
   readOnly,
   onClick,
   ariaLabel,
+  id,
 }: {
   value: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -28,15 +30,18 @@ export function DarkInput({
   list?: string;
   type?: string;
   min?: string;
+  maxLength?: number;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
   readOnly?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
+  id?: string;
 }) {
   const fieldLabel = useContext(FieldLabelContext);
   return (
     <input
+      id={id}
       aria-label={ariaLabel || fieldLabel || placeholder}
       type={type}
       list={list}
@@ -45,6 +50,7 @@ export function DarkInput({
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       min={min}
+      maxLength={maxLength}
       readOnly={readOnly}
       onClick={onClick}
       className={`${inputBase} ${readOnly ? "cursor-pointer" : ""} ${className}`}
@@ -585,6 +591,26 @@ export function DarkChipList({
   );
 }
 
+// ── DarkSwitchTrack ─────────────────────────────────────────────────────────
+export function DarkSwitchTrack({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
+        checked
+          ? "border-[#FF5A36] bg-[#FF5A36]"
+          : "border-white/5 bg-white/10"
+      }`}
+    >
+      <span
+        className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-[left] duration-200 ${
+          checked ? "left-[18px]" : "left-0.5"
+        }`}
+      />
+    </span>
+  );
+}
+
 // ── DarkToggle ──────────────────────────────────────────────────────────────
 export function DarkToggle({
   checked,
@@ -598,32 +624,26 @@ export function DarkToggle({
   description?: string;
 }) {
   return (
-    <label className="flex items-start gap-3.5 cursor-pointer group">
-      <button
-        type="button"
-        role="switch"
-        aria-label={label}
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#FF5A36]/40 ${
-          checked ? "bg-[#FF5A36]" : "bg-white/10 border border-white/5"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white  transition-transform duration-300 ${
-            checked ? "translate-x-5" : "translate-x-0"
-          }`}
-        />
-      </button>
-      <div>
-        <p className="text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors">
+    <button
+      type="button"
+      role="switch"
+      aria-label={label}
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="group flex w-full items-start gap-3.5 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5A36]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1e1f22]"
+    >
+      <DarkSwitchTrack checked={checked} />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-zinc-200 transition-colors group-hover:text-white">
           {label}
-        </p>
+        </span>
         {description && (
-          <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{description}</p>
+          <span className="mt-1 block text-[13px] leading-relaxed text-zinc-400">
+            {description}
+          </span>
         )}
-      </div>
-    </label>
+      </span>
+    </button>
   );
 }
 

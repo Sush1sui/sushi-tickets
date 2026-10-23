@@ -42,10 +42,22 @@ type FormData struct {
 	TicketPermissionsAddReactions  bool   `json:"TicketPermissionsAddReactions"`
 	AutoClose                      bool   `json:"AutoClose"`
 	AutoCloseOnUserLeave           bool   `json:"AutoCloseOnUserLeave"`
-	AutoCloseNoResponseDays        int    `json:"AutoCloseNoResponseDays"`
-	AutoCloseNoResponseHours       int    `json:"AutoCloseNoResponseHours"`
-	AutoCloseNoResponseMins        int    `json:"AutoCloseNoResponseMins"`
-	AutoCloseSinceLastMessageDays  int    `json:"AutoCloseSinceLastMessageDays"`
-	AutoCloseSinceLastMessageHours int    `json:"AutoCloseSinceLastMessageHours"`
-	AutoCloseSinceLastMessageMins  int    `json:"AutoCloseSinceLastMessageMins"`
+	AutoCloseNoResponseDays        *int   `json:"AutoCloseNoResponseDays"`
+	AutoCloseNoResponseHours       *int   `json:"AutoCloseNoResponseHours"`
+	AutoCloseNoResponseMins        *int   `json:"AutoCloseNoResponseMins"`
+	AutoCloseSinceLastMessageDays  *int   `json:"AutoCloseSinceLastMessageDays"`
+	AutoCloseSinceLastMessageHours *int   `json:"AutoCloseSinceLastMessageHours"`
+	AutoCloseSinceLastMessageMins  *int   `json:"AutoCloseSinceLastMessageMins"`
+}
+
+type ServerConfigResponse struct {
+	db.ServerConfig
+	AutoClose                      bool `json:"AutoClose"`
+	AutoCloseOnUserLeave           bool `json:"AutoCloseOnUserLeave"`
+	AutoCloseNoResponseDays        *int `json:"AutoCloseNoResponseDays"`
+	AutoCloseNoResponseHours       *int `json:"AutoCloseNoResponseHours"`
+	AutoCloseNoResponseMins        *int `json:"AutoCloseNoResponseMins"`
+	AutoCloseSinceLastMessageDays  *int `json:"AutoCloseSinceLastMessageDays"`
+	AutoCloseSinceLastMessageHours *int `json:"AutoCloseSinceLastMessageHours"`
+	AutoCloseSinceLastMessageMins  *int `json:"AutoCloseSinceLastMessageMins"`
 }
