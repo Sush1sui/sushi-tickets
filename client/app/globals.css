@@ -57,7 +57,7 @@
   --popover: #2b2d31;
   --popover-foreground: #dbdee1;
   --primary: #FF5A36; /* Sushi Orange remains brand color */
-  --primary-foreground: #ffffff;
+  --primary-foreground: #1e1f22;
   --secondary: #1e1f22; /* Discord server list / deep background gray */
   --secondary-foreground: #dbdee1;
   --muted: #1e1f22;
@@ -92,7 +92,7 @@
   --popover: #2b2d31;
   --popover-foreground: #dbdee1;
   --primary: #FF5A36;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #1e1f22;
   --secondary: #1e1f22;
   --secondary-foreground: #dbdee1;
   --muted: #1e1f22;

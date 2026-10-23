@@ -174,7 +174,7 @@ export default function EditMultiPanelPage() {
 	if (error) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<p className="text-sm text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-xl">
+				<p className="text-sm text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-md">
 					Failed to load multi panel.
 				</p>
 			</div>
@@ -188,10 +188,10 @@ export default function EditMultiPanelPage() {
 		<>
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
 			{/* Sticky Header */}
-			<div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
+			<div className="page-heading">
 				<div>
-					<h1 className="text-xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Edit Multi Panel</h1>
-					<p className="text-xs text-zinc-300 font-semibold mt-1">
+					<h1 className="text-xl font-medium tracking-tight text-white ">Edit Multi Panel</h1>
+					<p className="text-[13px] text-zinc-300 font-semibold mt-1">
 						Update details and configuration of this multi panel embed.
 					</p>
 				</div>
@@ -200,7 +200,7 @@ export default function EditMultiPanelPage() {
 						type="button"
 						onClick={() => setModalOpen(true)}
 						disabled={deleting || isLoading}
-						className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer shrink-0"
+						className="flex items-center gap-2 rounded-md px-4 py-2 text-[13px] font-medium bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-colors duration-200 disabled:opacity-60 cursor-pointer shrink-0"
 					>
 						<Trash className="h-3.5 w-3.5" />
 						{deleting ? "Deleting..." : "Delete Multi Panel"}
@@ -208,7 +208,7 @@ export default function EditMultiPanelPage() {
 					<button
 						type="submit"
 						disabled={saving || isLoading}
-						className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
+						className="flex items-center gap-2 rounded-md px-5 py-2.5 text-[13px] font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
 					>
 						<Save className="h-4 w-4" />
 						{saving ? "Saving..." : "Save Changes"}
@@ -220,7 +220,7 @@ export default function EditMultiPanelPage() {
 				<div className="flex items-center justify-center py-12">
 					<div className="flex flex-col items-center gap-3">
 						<div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-						<p className="text-xs text-zinc-500">Loading multi panel data...</p>
+						<p className="text-[13px] text-zinc-400">Loading multi panel data...</p>
 					</div>
 				</div>
 			)}
@@ -261,7 +261,7 @@ export default function EditMultiPanelPage() {
 							<button
 								type="button"
 								onClick={handleAddPanel}
-								className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all"
+								className="flex items-center gap-1.5 rounded-lg border border-zinc-800/60 bg-zinc-900/40 px-3 py-1.5 text-[13px] font-semibold text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-colors"
 							>
 								<Plus className="h-3.5 w-3.5" />
 								Add Panel Link
@@ -271,7 +271,7 @@ export default function EditMultiPanelPage() {
 						<div className="space-y-2.5">
 							{form.panelConfigIds.map((panelId, index) => (
 								<div key={index} className="flex items-center gap-2">
-									<span className="text-xs font-mono text-zinc-600 w-5 shrink-0 text-right">
+									<span className="text-[13px] font-mono text-zinc-400 w-5 shrink-0 text-right">
 										{index + 1}.
 									</span>
 									<div className="flex-1">
@@ -283,10 +283,10 @@ export default function EditMultiPanelPage() {
 										/>
 									</div>
 									<button
-										type="button"
+										type="button" aria-label={`Remove panel link ${index + 1}`}
 										disabled={form.panelConfigIds.length <= 2}
 										onClick={() => handleRemovePanel(index)}
-										className="p-2 rounded-lg text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/60 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+										className="p-2 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/60 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
 									>
 										<Trash2 className="h-3.5 w-3.5" />
 									</button>
@@ -308,8 +308,7 @@ export default function EditMultiPanelPage() {
 								</FormLabel>
 								<FormLabel label="Embed color">
 									<div className="flex items-center gap-2">
-										<input
-											type="color"
+										<input aria-label="Embed color" type="color"
 											value={form.embedColor}
 											onChange={(e) => setForm((p) => ({ ...p, embedColor: e.target.value }))}
 											className="h-10 w-12 rounded-lg border border-zinc-800/80 bg-zinc-900/60 cursor-pointer p-1"

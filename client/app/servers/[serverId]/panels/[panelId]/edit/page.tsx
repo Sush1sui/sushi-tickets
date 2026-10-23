@@ -32,10 +32,10 @@ import ScheduleWindows from "../../../../../../components/ScheduleWindows";
 import { Save, Plus, Trash2, Trash } from "lucide-react";
 
 const buttonColorOptions = [
-	{ value: "primary", label: "🔵  Blue" },
-	{ value: "success", label: "🟢  Green" },
-	{ value: "danger", label: "🔴  Red" },
-	{ value: "secondary", label: "⚫  Gray" },
+	{ value: "primary", label: "Blue" },
+	{ value: "success", label: "Green" },
+	{ value: "danger", label: "Red" },
+	{ value: "secondary", label: "Gray" },
 ];
 
 const normalizeButtonColor = (color?: string): string => {
@@ -339,7 +339,7 @@ export default function EditPanelPage() {
 	if (error) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<p className="text-sm text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-xl">
+				<p className="text-sm text-red-400 font-semibold bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-md">
 					Failed to load panel.
 				</p>
 			</div>
@@ -360,10 +360,10 @@ export default function EditPanelPage() {
 		<>
 		<form onSubmit={handleSubmit} className="space-y-5 pb-6">
 			{/* Top Header */}
-			<div className="sticky top-20 z-30 lg:static flex items-center justify-between mb-4 bg-white/2 border border-white/5 rounded-2xl p-5 shadow-sm backdrop-blur-md">
+			<div className="page-heading">
 				<div>
-					<h1 className="text-xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Edit Panel</h1>
-					<p className="text-xs text-zinc-300 font-semibold mt-1">
+					<h1 className="text-xl font-medium tracking-tight text-white ">Edit Panel</h1>
+					<p className="text-[13px] text-zinc-300 font-semibold mt-1">
 						Update the ticket panel details and embed parameters.
 					</p>
 				</div>
@@ -372,7 +372,7 @@ export default function EditPanelPage() {
 						type="button"
 						onClick={() => setModalOpen(true)}
 						disabled={deleting || isLoading}
-						className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer shrink-0"
+						className="flex items-center gap-2 rounded-md px-4 py-2 text-[13px] font-medium bg-zinc-950 border border-red-900/30 text-red-400 hover:bg-red-500/10 active:scale-95 transition-colors duration-200 disabled:opacity-60 cursor-pointer shrink-0"
 					>
 						<Trash className="h-3.5 w-3.5" />
 						{deleting ? "Deleting..." : "Delete"}
@@ -380,7 +380,7 @@ export default function EditPanelPage() {
 					<button
 						type="submit"
 						disabled={saving || isLoading}
-						className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
+						className="flex items-center gap-2 rounded-md px-5 py-2.5 text-[13px] font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors duration-200 active:scale-95 disabled:opacity-60 shrink-0 hover:-translate-y-0.5 cursor-pointer"
 					>
 						<Save className="h-4 w-4" />
 						{saving ? "Saving..." : "Save Changes"}
@@ -392,13 +392,13 @@ export default function EditPanelPage() {
 				<div className="flex items-center justify-center py-12">
 					<div className="flex flex-col items-center gap-3">
 						<div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-						<p className="text-xs text-zinc-500">Loading panel data...</p>
+						<p className="text-[13px] text-zinc-400">Loading panel data...</p>
 					</div>
 				</div>
 			)}
 
 			{!isLoading && saveError && (
-				<div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
+				<div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-semibold text-red-400">
 					{saveError}
 				</div>
 			)}
@@ -428,11 +428,10 @@ export default function EditPanelPage() {
 									</FormLabel>
 									<FormLabel label="Panel color">
 										<div className="flex items-center gap-2">
-											<input
-												type="color"
+											<input aria-label="Embed color" type="color"
 												value={form.color}
 												onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
-												className="h-10 w-12 rounded-xl border border-white/5 bg-[#1e1f22] cursor-pointer p-1"
+												className="h-10 w-12 rounded-md border border-white/5 bg-[#1e1f22] cursor-pointer p-1"
 											/>
 											<DarkInput
 												value={form.color}
@@ -493,7 +492,7 @@ export default function EditPanelPage() {
 								</div>
 								<FormLabel label="Button emoji" hint="optional">
 									{emojisLoading && form.customEmoji ? (
-										<p className="text-xs text-zinc-500 py-2">Loading server emojis...</p>
+										<p className="text-[13px] text-zinc-400 py-2">Loading server emojis...</p>
 									) : (
 										<EmojiPicker
 											value={form.emoji}
@@ -571,7 +570,7 @@ export default function EditPanelPage() {
 											],
 										}))
 									}
-									className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm"
+									className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-zinc-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer "
 								>
 									<Plus className="h-3.5 w-3.5" />
 									Add Question
@@ -596,11 +595,11 @@ export default function EditPanelPage() {
 								{form.questions.map((question, index) => (
 									<div
 										key={index}
-										className="rounded-xl border border-white/5 bg-white/[0.02] p-3.5 space-y-2.5 transition-all hover:border-white/10"
+										className="rounded-md border border-white/5 bg-white/[0.02] p-3.5 space-y-2.5 transition-colors hover:border-white/10"
 									>
 										{/* Top row: number, label, type toggle, required toggle, delete */}
-										<div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-											<span className="text-xs font-bold font-mono text-zinc-400 w-5 shrink-0 text-right">
+										<div className="question-row">
+											<span className="text-[13px] font-medium font-mono text-zinc-400 w-5 shrink-0 text-right">
 												{index + 1}.
 											</span>
 											<DarkInput
@@ -611,7 +610,7 @@ export default function EditPanelPage() {
 													setForm((p) => ({ ...p, questions: next }));
 												}}
 												placeholder={`Question ${index + 1} (e.g. Roblox Username)`}
-												className="flex-1 min-w-[180px]"
+												className="min-w-0"
 											/>
 
 											{/* Input Style Toggle */}
@@ -623,9 +622,9 @@ export default function EditPanelPage() {
 														next[index] = { ...next[index], style: "short" };
 														setForm((p) => ({ ...p, questions: next }));
 													}}
-													className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+													className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
 														(question.style || "short") === "short"
-															? "bg-[#FF5A36] text-white shadow-sm"
+															? "bg-zinc-100 text-zinc-950 "
 															: "text-zinc-400 hover:text-zinc-200"
 													}`}
 													title="Single-line text input"
@@ -639,9 +638,9 @@ export default function EditPanelPage() {
 														next[index] = { ...next[index], style: "paragraph" };
 														setForm((p) => ({ ...p, questions: next }));
 													}}
-													className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+													className={`px-2.5 py-1 rounded text-xs font-bold transition-colors ${
 														question.style === "paragraph"
-															? "bg-[#FF5A36] text-white shadow-sm"
+															? "bg-zinc-100 text-zinc-950 "
 															: "text-zinc-400 hover:text-zinc-200"
 													}`}
 													title="Multi-line textarea"
@@ -659,10 +658,10 @@ export default function EditPanelPage() {
 													setForm((p) => ({ ...p, questions: next }));
 												}}
 												title={question.isRequired ? "Mark as optional" : "Mark as required"}
-												className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-200 cursor-pointer ${
+												className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 cursor-pointer ${
 													question.isRequired
-														? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 shadow-[0_0_8px_rgba(255,90,54,0.15)]"
-														: "bg-white/5 text-zinc-500 border border-white/10 hover:text-zinc-300 hover:border-white/20"
+														? "bg-[#FF5A36]/15 text-[#FF5A36] border border-[#FF5A36]/40 "
+														: "bg-white/5 text-zinc-400 border border-white/10 hover:text-zinc-300 hover:border-white/20"
 												}`}
 											>
 												{question.isRequired ? "Required" : "Optional"}
@@ -670,6 +669,7 @@ export default function EditPanelPage() {
 
 											<button
 												type="button"
+												aria-label={`Remove question ${index + 1}`}
 												onClick={() => {
 													const next = form.questions.filter((_, i) => i !== index);
 													setForm((p) => ({
@@ -679,14 +679,14 @@ export default function EditPanelPage() {
 															: [{ label: "", isRequired: false, style: "short", placeholder: "" }],
 													}));
 												}}
-												className="p-2 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all shrink-0 cursor-pointer"
+												className="p-2 rounded-md text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-colors shrink-0 cursor-pointer"
 											>
 												<Trash2 className="h-4 w-4" />
 											</button>
 										</div>
 
 										{/* Bottom row: Optional Placeholder */}
-										<div className="pl-7 pr-1">
+										<div className="min-w-0">
 											<DarkInput
 												value={question.placeholder || ""}
 												onChange={(e) => {
@@ -695,14 +695,14 @@ export default function EditPanelPage() {
 													setForm((p) => ({ ...p, questions: next }));
 												}}
 												placeholder="Optional placeholder (e.g. Enter your Roblox username...)"
-												className="text-xs py-1.5 bg-[#17181a] border-white/5"
+												className="text-[13px] py-1.5 bg-[#17181a] border-white/5"
 											/>
 										</div>
 									</div>
 								))}
 								{form.questions.length === 0 && (
-									<p className="text-xs text-zinc-400 italic text-center py-4">
-										No pre-flight questions — click "Add Question" above.
+									<p className="text-[13px] text-zinc-400 italic text-center py-4">
+										No pre-flight questions. Click &quot;Add Question&quot; above.
 									</p>
 								)}
 								</div>
@@ -730,8 +730,7 @@ export default function EditPanelPage() {
 									</FormLabel>
 									<FormLabel label="Embed color">
 										<div className="flex items-center gap-2">
-											<input
-												type="color"
+											<input aria-label="Embed color" type="color"
 												value={form.welcomeMessage.embedColor}
 												onChange={(e) =>
 													setForm((p) => ({
@@ -739,7 +738,7 @@ export default function EditPanelPage() {
 														welcomeMessage: { ...p.welcomeMessage, embedColor: e.target.value },
 													}))
 												}
-												className="h-10 w-12 rounded-xl border border-white/5 bg-[#1e1f22] cursor-pointer p-1"
+												className="h-10 w-12 rounded-md border border-white/5 bg-[#1e1f22] cursor-pointer p-1"
 											/>
 											<DarkInput
 												value={form.welcomeMessage.embedColor}
@@ -842,12 +841,12 @@ export default function EditPanelPage() {
 					{/* RIGHT COLUMN: Real-Time Live Discord Preview & Sticky Action Bar (5/12 width) */}
 					<div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
 						{/* Sticky Quick Actions in Right Sidebar */}
-						<div className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 p-3 rounded-2xl shadow-xl backdrop-blur-md">
+						<div className="flex items-center justify-between gap-3 bg-white/[0.03] border border-white/5 p-3 rounded-lg ">
 							<button
 								type="button"
 								onClick={() => setModalOpen(true)}
 								disabled={deleting || isLoading || saving}
-								className="flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-bold bg-zinc-950/80 border border-red-900/40 text-red-400 hover:bg-red-500/15 active:scale-95 transition-all duration-200 disabled:opacity-60 cursor-pointer shadow-sm shrink-0"
+								className="flex items-center gap-1.5 rounded-md px-3.5 py-2.5 text-[13px] font-medium bg-zinc-950/80 border border-red-900/40 text-red-400 hover:bg-red-500/15 active:scale-95 transition-colors duration-200 disabled:opacity-60 cursor-pointer shrink-0"
 								title="Delete Panel"
 							>
 								<Trash className="h-3.5 w-3.5" />
@@ -856,7 +855,7 @@ export default function EditPanelPage() {
 							<button
 								type="submit"
 								disabled={saving || isLoading || deleting}
-								className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/30 transition-all duration-200 active:scale-95 disabled:opacity-60 hover:-translate-y-0.5 cursor-pointer text-glow-sushi shrink-0"
+								className="flex items-center gap-2 rounded-md px-5 py-2.5 text-[13px] font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors duration-200 active:scale-95 disabled:opacity-60 hover:-translate-y-0.5 cursor-pointer shrink-0"
 							>
 								<Save className="h-4 w-4" />
 								<span>{saving ? "Saving..." : "Save Changes"}</span>
@@ -864,16 +863,17 @@ export default function EditPanelPage() {
 						</div>
 
 						<div className="flex items-center justify-between px-2">
-							<span className="text-xs uppercase font-extrabold tracking-widest text-[#FF5A36] text-glow-sushi">
+							<span className="text-[13px] font-medium text-[#FF5A36] ">
 								Live Previews
 							</span>
 							{/* Tab Switcher */}
-							<div className="flex bg-white/5 border border-white/5 rounded-xl p-1 text-xs font-bold text-zinc-400 gap-1">
+							<div className="flex bg-white/5 border border-white/5 rounded-md p-1 text-[13px] font-medium text-zinc-400 gap-1">
 								<button
 									type="button"
-									onClick={() => setPreviewTab("panel")}
-									className={`px-4 py-2 rounded-lg transition-all cursor-pointer font-bold text-xs ${previewTab === "panel"
-										? "bg-[#FF5A36] text-white shadow-md shadow-orange-950/15"
+									aria-pressed={previewTab === "panel"}
+                onClick={() => setPreviewTab("panel")}
+									className={`px-4 py-2 rounded-lg transition-colors cursor-pointer font-bold text-xs ${previewTab === "panel"
+										? "bg-zinc-100 text-zinc-950  "
 										: "hover:text-zinc-200"
 										}`}
 								>
@@ -881,9 +881,10 @@ export default function EditPanelPage() {
 								</button>
 								<button
 									type="button"
-									onClick={() => setPreviewTab("welcome")}
-									className={`px-4 py-2 rounded-lg transition-all cursor-pointer font-bold text-xs ${previewTab === "welcome"
-										? "bg-[#FF5A36] text-white shadow-md shadow-orange-950/15"
+									aria-pressed={previewTab === "welcome"}
+                onClick={() => setPreviewTab("welcome")}
+									className={`px-4 py-2 rounded-lg transition-colors cursor-pointer font-bold text-xs ${previewTab === "welcome"
+										? "bg-zinc-100 text-zinc-950  "
 										: "hover:text-zinc-200"
 										}`}
 								>
@@ -892,7 +893,7 @@ export default function EditPanelPage() {
 							</div>
 						</div>
 
-						<div className="bg-zinc-900/10 border border-white/5 p-6 rounded-2xl shadow-xl backdrop-blur-md flex flex-col items-center justify-center min-h-[320px]">
+						<div className="bg-zinc-900/10 border border-white/5 p-6 rounded-lg flex flex-col items-center justify-center min-h-[320px]">
 							{previewTab === "panel" ? (
 								<DiscordMockup
 									authorName="Sushi Tickets"
@@ -922,7 +923,7 @@ export default function EditPanelPage() {
 									buttons={[
 										{
 											label: "Close Ticket",
-											emoji: "🔒",
+											emoji: "",
 											style: "danger"
 										}
 									]}
@@ -930,8 +931,8 @@ export default function EditPanelPage() {
 							)}
 						</div>
 
-						<div className="bg-zinc-950/20 border border-white/2 p-4 rounded-xl text-center">
-							<p className="text-[11px] text-zinc-400 font-medium leading-relaxed">
+						<div className="bg-zinc-950/20 border border-white/2 p-4 rounded-md text-center">
+							<p className="text-[13px] text-zinc-400 font-medium leading-relaxed">
 								{previewTab === "panel"
 									? "This preview displays a real-time simulation of exactly how your public ticket panel will render in your Discord channel."
 									: "This preview displays a real-time simulation of exactly how the welcome embed will render in the opened private ticket channel."}

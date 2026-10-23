@@ -8,7 +8,7 @@ export default function Footer() {
     "https://discord.gg/CvyTbqtGA3";
 
   return (
-    <footer className="border-t border-zinc-900 pt-6 pb-2 text-xs text-zinc-500 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <footer className="site-footer">
       <div className="flex items-center gap-2">
         <img
           src="/assets/sushi_logo_without_bg.png"
@@ -25,7 +25,7 @@ export default function Footer() {
         href={supportUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-full border border-[#5865F2]/30 bg-[#5865F2]/10 px-3.5 py-1.5 font-semibold text-[#5865F2] hover:bg-[#5865F2] hover:text-white hover:shadow-[0_0_12px_rgba(88,101,242,0.3)] transition-all duration-300"
+        className="site-footer-link"
       >
         <svg
           className="h-3.5 w-3.5 fill-current"
@@ -37,7 +37,7 @@ export default function Footer() {
         <span>Support Server</span>
       </a>
 
-      <div className="text-zinc-500">
+      <div className="text-zinc-400">
         © {new Date().getFullYear()} Sushi Tickets. Roll support out with sushi!
       </div>
     </footer>

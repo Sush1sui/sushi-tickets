@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { createContext, useContext, useState, useMemo } from "react";
 import { ChevronDown, X, Search, Check } from "lucide-react";
 
 // ── Shared base classes ─────────────────────────────────────────────────────
+const FieldLabelContext = createContext<string | undefined>(undefined);
 const inputBase =
-  "w-full bg-[#1e1f22] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 hover:border-white/10 transition-all duration-200 shadow-inner";
+  "w-full min-w-0 bg-[#1e1f22] border border-[#45474f] rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-400 focus:border-[#FF5A36] transition-colors duration-150";
 
 // ── DarkInput ───────────────────────────────────────────────────────────────
 export function DarkInput({
@@ -19,6 +20,7 @@ export function DarkInput({
   className = "",
   readOnly,
   onClick,
+  ariaLabel,
 }: {
   value: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -30,9 +32,12 @@ export function DarkInput({
   className?: string;
   readOnly?: boolean;
   onClick?: () => void;
+  ariaLabel?: string;
 }) {
+  const fieldLabel = useContext(FieldLabelContext);
   return (
     <input
+      aria-label={ariaLabel || fieldLabel || placeholder}
       type={type}
       list={list}
       value={value}
@@ -61,8 +66,10 @@ export function DarkTextarea({
   rows?: number;
   className?: string;
 }) {
+  const fieldLabel = useContext(FieldLabelContext);
   return (
     <textarea
+      aria-label={fieldLabel || placeholder}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
@@ -85,14 +92,18 @@ export function DarkSelect({
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const fieldLabel = useContext(FieldLabelContext);
   const selected = options.find((o) => o.value === value);
 
   return (
     <div className={`relative ${open ? "z-30" : ""}`}>
       <button
         type="button"
+        aria-label={fieldLabel}
+        aria-expanded={open}
+        onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
         onClick={() => setOpen((p) => !p)}
-        className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-left transition-all duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 shadow-inner"
+        className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-md px-4 py-2.5 text-sm text-left transition-colors duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 "
       >
         <span className={selected ? "text-zinc-100 font-medium" : "text-zinc-400"}>
           {selected?.label ?? placeholder}
@@ -119,7 +130,7 @@ export function DarkSelect({
         <>
           {/* Backdrop */}
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute z-20 mt-2 w-full rounded-2xl border border-white/10 bg-[#1e1f22] backdrop-blur-xl shadow-2xl overflow-hidden shadow-orange-950/10 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="absolute z-20 mt-2 w-full rounded-lg border border-white/10 bg-[#1e1f22] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
             <div className="max-h-52 overflow-y-auto py-1.5">
               {options.map((opt) => (
                 <button
@@ -131,7 +142,7 @@ export function DarkSelect({
                   }}
                   className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm text-left transition-colors ${
                     opt.value === value
-                      ? "text-white bg-[#FF5A36]/20 font-bold"
+                      ? "text-zinc-950 bg-zinc-100/20 font-bold"
                       : "text-zinc-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
@@ -164,6 +175,7 @@ export function DarkCombobox({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const fieldLabel = useContext(FieldLabelContext);
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -192,20 +204,24 @@ export function DarkCombobox({
 
   return (
     <div className={`relative ${open ? "z-30" : ""} ${className}`}>
-      <div className="flex items-center gap-2 bg-[#1e1f22] border border-white/10 rounded-xl px-4 py-2.5 transition-all duration-200 focus-within:border-[#FF5A36] focus-within:ring-2 focus-within:ring-[#FF5A36]/20 hover:border-white/20 shadow-inner">
+      <div className="flex items-center gap-2 bg-[#1e1f22] border border-white/10 rounded-md px-4 py-2.5 transition-colors duration-200 focus-within:border-[#FF5A36] focus-within:ring-2 focus-within:ring-[#FF5A36]/20 hover:border-white/20 ">
         <Search className="h-4 w-4 text-zinc-400 shrink-0" />
         <input
           type="text"
+          aria-label={fieldLabel || placeholder}
+          aria-expanded={open}
+          onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
           value={query || value}
           onChange={handleChange}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
         />
         {(query || value) && (
           <button
             type="button"
+            aria-label="Clear channel"
             onClick={() => {
               onChange("");
               setQuery("");
@@ -218,21 +234,22 @@ export function DarkCombobox({
       </div>
 
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-2 w-full rounded-2xl border border-white/10 bg-[#1e1f22] backdrop-blur-xl shadow-2xl overflow-hidden shadow-orange-950/10">
+        <div className="absolute z-20 mt-2 w-full rounded-lg border border-white/10 bg-[#1e1f22] overflow-hidden ">
           <div className="max-h-52 overflow-y-auto py-1.5">
             {filtered.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                onMouseDown={() => handleSelect(opt)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => handleSelect(opt)}
                 className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-sm text-left transition-colors ${
                   opt.label === value
-                    ? "text-white bg-[#FF5A36]/20 font-bold"
+                    ? "text-zinc-950 bg-zinc-100/20 font-bold"
                     : "text-zinc-300 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <span className="text-zinc-500 font-mono">#</span>
+                  <span className="text-zinc-400 font-mono">#</span>
                   {opt.label}
                 </span>
                 {opt.label === value && (
@@ -259,6 +276,7 @@ export function DarkMultiRolePicker({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const fieldLabel = useContext(FieldLabelContext);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -279,8 +297,8 @@ export function DarkMultiRolePicker({
             return (
               <span
                 key={role.id}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-3 py-1.5 text-xs font-bold transition-all hover:bg-white/10"
-                style={{ color: hex }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-white/10"
+                style={{ color: "#dbdee1" }}
               >
                 <span
                   className="h-2 w-2 rounded-full shrink-0"
@@ -289,6 +307,7 @@ export function DarkMultiRolePicker({
                 @{role.name}
                 <button
                   type="button"
+                  aria-label={`Remove ${role.name}`}
                   onClick={() => onToggle(role.id)}
                   className="ml-1 text-zinc-400 hover:text-zinc-100 transition-colors"
                 >
@@ -304,8 +323,11 @@ export function DarkMultiRolePicker({
       <div className={`relative ${open ? "z-30" : ""}`}>
         <button
           type="button"
+          aria-label={fieldLabel || "Select roles"}
+          aria-expanded={open}
+          onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
           onClick={() => setOpen((p) => !p)}
-          className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-left transition-all duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 shadow-inner"
+          className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-md px-4 py-2.5 text-sm text-left transition-colors duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 "
         >
           <span className={selectedIds.length > 0 ? "text-zinc-100 font-medium" : "text-zinc-400"}>
             {selectedIds.length === 0
@@ -336,7 +358,7 @@ export function DarkMultiRolePicker({
               className="fixed inset-0 z-10"
               onClick={() => setOpen(false)}
             />
-            <div className="absolute z-20 mt-2 w-full rounded-2xl border border-white/10 bg-[#1e1f22] backdrop-blur-xl shadow-2xl overflow-hidden shadow-orange-950/10">
+            <div className="absolute z-20 mt-2 w-full rounded-lg border border-white/10 bg-[#1e1f22] overflow-hidden ">
               {/* Search */}
               <div className="flex items-center gap-2 border-b border-white/5 px-4 py-2.5">
                 <Search className="h-4 w-4 text-zinc-400 shrink-0" />
@@ -344,14 +366,15 @@ export function DarkMultiRolePicker({
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search roles"
                   placeholder="Search roles..."
-                  className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
                   autoFocus
                 />
               </div>
               <div className="max-h-52 overflow-y-auto py-1.5">
                 {filtered.length === 0 ? (
-                  <p className="px-4 py-3 text-xs text-zinc-400">
+                  <p className="px-4 py-3 text-[13px] text-zinc-400">
                     No roles found.
                   </p>
                 ) : (
@@ -429,7 +452,7 @@ export function DarkSearchDropdown({
 
   return (
     <div className={`relative ${open ? "z-30" : ""}`}>
-      <div className="flex items-center gap-2 bg-[#1e1f22] border border-white/10 rounded-xl px-4 py-2.5 transition-all duration-200 focus-within:border-[#FF5A36] focus-within:ring-2 focus-within:ring-[#FF5A36]/20 hover:border-white/20 shadow-inner">
+      <div className="flex items-center gap-2 bg-[#1e1f22] border border-white/10 rounded-md px-4 py-2.5 transition-colors duration-200 focus-within:border-[#FF5A36] focus-within:ring-2 focus-within:ring-[#FF5A36]/20 hover:border-white/20 ">
          <Search className="h-4 w-4 text-zinc-400 shrink-0" />
         <input
           type="text"
@@ -440,13 +463,14 @@ export function DarkSearchDropdown({
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
+          aria-label={placeholder}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-400 focus:outline-none"
         />
       </div>
 
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-2 w-full rounded-2xl border border-white/10 bg-[#1e1f22] backdrop-blur-xl shadow-2xl overflow-hidden shadow-orange-950/10">
+        <div className="absolute z-20 mt-2 w-full rounded-lg border border-white/10 bg-[#1e1f22] overflow-hidden ">
           <div className="max-h-56 overflow-y-auto py-1.5">
             {filtered.map((item) => {
               const hex = item.color
@@ -456,7 +480,8 @@ export function DarkSearchDropdown({
                 <button
                   key={item.id}
                   type="button"
-                  onMouseDown={() => {
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
                     onSelect(item.id);
                     setQuery("");
                     setOpen(false);
@@ -480,7 +505,7 @@ export function DarkSearchDropdown({
                     {item.label}
                   </span>
                   {item.sublabel && (
-                    <span className="truncate text-xs text-zinc-400">
+                    <span className="truncate text-[13px] text-zinc-400">
                       {item.sublabel}
                     </span>
                   )}
@@ -506,7 +531,7 @@ export function DarkChipList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="py-8 text-center text-xs text-zinc-400 italic">{emptyMessage}</p>
+      <p className="py-8 text-center text-[13px] text-zinc-400 italic">{emptyMessage}</p>
     );
   }
 
@@ -519,7 +544,7 @@ export function DarkChipList({
         return (
           <div
             key={item.id}
-            className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm px-4 py-3 hover:border-white/10 transition-all duration-200"
+            className="flex items-center gap-3 rounded-md border border-white/5 bg-white/5 px-4 py-3 hover:border-white/10 transition-colors duration-200"
           >
             {/* Avatar or color swatch */}
             {item.avatarUrl ? (
@@ -540,15 +565,16 @@ export function DarkChipList({
               {item.label}
             </span>
             {item.sublabel && (
-              <span className="shrink-0 text-xs text-zinc-400 font-mono">
+              <span className="shrink-0 text-[13px] text-zinc-400 font-mono">
                 {item.sublabel}
               </span>
             )}
             {/* Remove button */}
             <button
               type="button"
+              aria-label={`Remove ${item.label}`}
               onClick={() => onRemove(item.id)}
-              className="shrink-0 rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-zinc-100 transition-all"
+              className="shrink-0 rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-zinc-100 transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -576,14 +602,15 @@ export function DarkToggle({
       <button
         type="button"
         role="switch"
+        aria-label={label}
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#FF5A36]/40 ${
+        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#FF5A36]/40 ${
           checked ? "bg-[#FF5A36]" : "bg-white/10 border border-white/5"
         }`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
+          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white  transition-transform duration-300 ${
             checked ? "translate-x-5" : "translate-x-0"
           }`}
         />
@@ -593,7 +620,7 @@ export function DarkToggle({
           {label}
         </p>
         {description && (
-          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{description}</p>
+          <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{description}</p>
         )}
       </div>
     </label>
@@ -617,11 +644,12 @@ export function DarkCheckbox({
       <button
         type="button"
         role="checkbox"
+        aria-label={label}
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`mt-0.5 shrink-0 rounded-lg border transition-all duration-200 flex items-center justify-center ${
+        className={`mt-0.5 shrink-0 rounded-lg border transition-colors duration-200 flex items-center justify-center ${
           checked
-            ? "bg-[#FF5A36] border-[#FF5A36] shadow-lg shadow-orange-600/10"
+            ? "bg-[#FF5A36] border-[#FF5A36]  "
             : "bg-[#1e1f22] border-white/5 group-hover:border-white/15"
         }`}
         style={{ height: "1.25rem", width: "1.25rem" }}
@@ -633,7 +661,7 @@ export function DarkCheckbox({
           {label}
         </span>
         {description && (
-          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{description}</p>
+          <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{description}</p>
         )}
       </div>
     </label>
@@ -653,18 +681,18 @@ export function SectionCard({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="relative z-10 rounded-2xl border border-white/[0.04] bg-[#2b2d31] transition-all duration-300 hover:border-white/[0.08] hover:shadow-2xl hover:shadow-black/20 focus-within:z-20">
-      <div className="flex items-start justify-between gap-4 px-6 py-4.5 border-b border-white/[0.04] rounded-t-2xl bg-white/[0.01]">
+    <section className="section-card">
+      <div className="section-card-header">
         <div>
-          <h2 className="text-sm font-extrabold tracking-tight text-white uppercase text-glow-sushi/10">{title}</h2>
+          <h2>{title}</h2>
           {description && (
-            <p className="text-xs text-zinc-300 font-medium mt-0.5 leading-relaxed">{description}</p>
+            <p>{description}</p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div className="p-6">{children}</div>
-    </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   );
 }
 
@@ -679,14 +707,16 @@ export function FormLabel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+    <FieldLabelContext.Provider value={label}>
+    <div className="form-label" role="group" aria-label={label}>
+      <div className="form-label-title">
+        <span>
           {label}
-        </label>
-        {hint && <span className="text-xs text-zinc-400 italic">{hint}</span>}
+        </span>
+        {hint && <span className="form-label-hint">{hint}</span>}
       </div>
       {children}
     </div>
+    </FieldLabelContext.Provider>
   );
 }

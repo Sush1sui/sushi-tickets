@@ -66,7 +66,7 @@ function TimeInput({
             onKeyDown={blockInvalid}
             className="w-16 text-center"
           />
-          <span className="text-xs text-zinc-500 w-6">{label}</span>
+          <span className="text-[13px] text-zinc-400 w-6">{label}</span>
         </div>
       ))}
     </div>
@@ -188,7 +188,7 @@ export default function ServerSettingsPage() {
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
           <div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-          <p className="text-xs text-zinc-500">Loading settings...</p>
+          <p className="text-[13px] text-zinc-400">Loading settings...</p>
         </div>
       </div>
     );
@@ -200,24 +200,24 @@ export default function ServerSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-6">
+    <div className="server-settings space-y-6 pb-6">
       {/* Header */}
-      <div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white uppercase text-glow-sushi/10">
+          <h1 className="text-2xl font-medium tracking-tight text-white ">
             Server Settings
           </h1>
-          <p className="text-xs text-zinc-300 font-semibold mt-1">
+          <p className="text-[13px] text-zinc-300 font-semibold mt-1">
             Configure how tickets work in this server.
           </p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer ${
+          className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-colors duration-200 active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer ${
             saved
               ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
-              : "bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 hover:-translate-y-0.5"
+              : "bg-zinc-100 hover:bg-white text-zinc-950   hover:-translate-y-0.5"
           }`}
         >
           <Save className="h-4 w-4" />
@@ -226,11 +226,11 @@ export default function ServerSettingsPage() {
       </div>
 
       {/* Modern Split Two-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
+      <div className="grid grid-cols-1 gap-6 items-start">
+
         {/* LEFT COLUMN: Core Customization & Limits (7/12 width) */}
-        <div className="lg:col-span-7 space-y-6">
-          
+        <div className="space-y-6">
+
           {/* Ticket Name Style */}
           <SectionCard
             title="Ticket Name Style"
@@ -244,12 +244,13 @@ export default function ServerSettingsPage() {
                 <button
                   key={value}
                   type="button"
+                  aria-pressed={formData.TicketNameStyle === value}
                   onClick={() =>
                     setFormData((p) => ({ ...p, TicketNameStyle: value }))
                   }
-                  className={`flex-1 rounded-2xl border p-4.5 text-left transition-all duration-200 active:scale-98 cursor-pointer ${
+                  className={`flex-1 rounded-2xl border p-4.5 text-left transition-colors duration-200 active:scale-98 cursor-pointer ${
                     formData.TicketNameStyle === value
-                      ? "border-[#FF5A36] bg-[#FF5A36]/10 shadow-lg shadow-orange-950/5"
+                      ? "border-[#FF5A36] bg-[#FF5A36]/10  "
                       : "border-white/5 bg-zinc-950/20 hover:border-white/10 hover:bg-zinc-950/40"
                   }`}
                 >
@@ -262,14 +263,14 @@ export default function ServerSettingsPage() {
                       }`}
                     >
                       {formData.TicketNameStyle === value && (
-                        <div className="h-2 w-2 rounded-full bg-[#FF5A36] shadow-[0_0_6px_#FF5A36]" />
+                        <div className="h-2 w-2 rounded-full bg-[#FF5A36] " />
                       )}
                     </div>
-                    <span className="text-sm font-bold text-zinc-100">
+                    <span className="text-sm font-medium text-zinc-100">
                       {label}
                     </span>
                   </div>
-                  <p className="text-xs font-bold font-mono text-zinc-400 pl-6.5">
+                  <p className="text-[13px] font-medium font-mono text-zinc-400 pl-6.5">
                     #{example}
                   </p>
                 </button>
@@ -310,9 +311,9 @@ export default function ServerSettingsPage() {
                       if (["e", "E", "-", "+", "."].includes(e.key))
                         e.preventDefault();
                     }}
-                    className="w-24 text-center font-bold text-zinc-100"
+                    className="w-24 text-center font-medium text-zinc-100"
                   />
-                  <p className="text-xs text-zinc-400 font-bold leading-none">
+                  <p className="text-[13px] text-zinc-400 font-medium leading-none">
                     ticket{formData.MaxTicketsPerUser !== 1 ? "s" : ""} per user
                   </p>
                 </div>
@@ -331,7 +332,7 @@ export default function ServerSettingsPage() {
                 { field: "TicketPermissionsEmbedLinks" as const, label: "Embed Links", desc: "Allow hyperlink styling" },
                 { field: "TicketPermissionsAddReactions" as const, label: "Add Reactions", desc: "Allow reaction emojis" },
               ].map(({ field, label, desc }) => (
-                <div key={field} className="bg-zinc-950/20 hover:bg-zinc-950/40 p-4 rounded-2xl border border-white/2 hover:border-white/5 transition-all duration-200">
+                <div key={field} className="bg-zinc-950/20 hover:bg-zinc-950/40 p-4 rounded-lg border border-white/2 hover:border-white/5 transition-colors duration-200">
                   <DarkCheckbox
                     checked={formData[field]}
                     onChange={(v) =>
@@ -349,15 +350,15 @@ export default function ServerSettingsPage() {
 
         {/* RIGHT COLUMN: Auto-Close Automation (5/12 width) */}
         <div className="lg:col-span-5">
-          
+
           <SectionCard
             title="Automation Center"
             description="Manage automatic ticket closing rules."
           >
             <div className="space-y-6">
-              
+
               {/* Main Toggle Pane */}
-              <div className="bg-zinc-950/30 border border-white/5 p-4.5 rounded-2xl shadow-inner">
+              <div className="bg-zinc-950/30 border border-white/5 p-4.5 rounded-lg ">
                 <DarkToggle
                   checked={formData.AutoClose}
                   onChange={(v) => setFormData((p) => ({ ...p, AutoClose: v }))}
@@ -368,9 +369,9 @@ export default function ServerSettingsPage() {
 
               {formData.AutoClose ? (
                 <div className="space-y-5 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  
+
                   {/* User leaves option */}
-                  <div className="bg-zinc-950/10 border border-white/2 p-4 rounded-xl">
+                  <div className="bg-zinc-950/10 border border-white/2 p-4 rounded-md">
                     <DarkCheckbox
                       checked={formData.AutoCloseOnUserLeave}
                       onChange={(v) =>
@@ -382,17 +383,17 @@ export default function ServerSettingsPage() {
                   </div>
 
                   {/* No Response Rule */}
-                  <div className="rounded-2xl border border-white/5 bg-zinc-950/35 p-5 space-y-4">
+                  <div className="rounded-lg border border-white/5 bg-zinc-950/35 p-5 space-y-4">
                     <div>
-                      <h4 className="text-xs font-extrabold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                      <h4 className="text-[13px] font-medium text-zinc-200 flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A36] shrink-0" />
                         No Response Since Opening
                       </h4>
-                      <p className="text-[11px] text-zinc-400 font-medium mt-1 leading-relaxed">
+                      <p className="text-[13px] text-zinc-400 font-medium mt-1 leading-relaxed">
                         Close ticket if creator fails to send any message after opening.
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 bg-zinc-950/30 p-3 rounded-xl border border-white/2">
+                    <div className="flex items-center gap-3 bg-zinc-950/30 p-3 rounded-md border border-white/2">
                       <TimeInput
                         days={formData.AutoCloseNoResponseDays}
                         hours={formData.AutoCloseNoResponseHours}
@@ -420,17 +421,17 @@ export default function ServerSettingsPage() {
                   </div>
 
                   {/* Inactivity timeout Rule */}
-                  <div className="rounded-2xl border border-white/5 bg-zinc-950/35 p-5 space-y-4">
+                  <div className="rounded-lg border border-white/5 bg-zinc-950/35 p-5 space-y-4">
                     <div>
-                      <h4 className="text-xs font-extrabold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+                      <h4 className="text-[13px] font-medium text-zinc-200 flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A36] shrink-0" />
                         General Inactivity Timeout
                       </h4>
-                      <p className="text-[11px] text-zinc-400 font-medium mt-1 leading-relaxed">
+                      <p className="text-[13px] text-zinc-400 font-medium mt-1 leading-relaxed">
                         Close ticket if no new messages are exchanged for this duration.
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 bg-zinc-950/30 p-3 rounded-xl border border-white/2">
+                    <div className="flex items-center gap-3 bg-zinc-950/30 p-3 rounded-md border border-white/2">
                       <TimeInput
                         days={formData.AutoCloseSinceLastMessageDays}
                         hours={formData.AutoCloseSinceLastMessageHours}
@@ -459,11 +460,9 @@ export default function ServerSettingsPage() {
 
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-white/10 bg-zinc-950/10">
-                  <div className="h-8 w-8 rounded-full bg-zinc-950/40 flex items-center justify-center text-zinc-500 text-sm font-bold shadow-inner">
-                    💤
-                  </div>
-                  <p className="text-xs text-zinc-400 font-semibold mt-2.5 leading-relaxed">
+                <div className="flex flex-col items-center justify-center p-8 text-center rounded-lg border border-dashed border-white/10 bg-zinc-950/10">
+
+                  <p className="text-[13px] text-zinc-400 font-semibold mt-2.5 leading-relaxed">
                     Auto-Close is currently disabled.
                   </p>
                 </div>

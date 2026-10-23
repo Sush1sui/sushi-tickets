@@ -136,7 +136,7 @@ export default function StaffPage() {
 			<div className="flex items-center justify-center py-20">
 				<div className="flex flex-col items-center gap-3">
 					<div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-					<p className="text-xs text-zinc-500">Loading staff...</p>
+					<p className="text-[13px] text-zinc-400">Loading staff...</p>
 				</div>
 			</div>
 		);
@@ -150,20 +150,20 @@ export default function StaffPage() {
 	return (
 		<div className="space-y-5 pb-6">
 			{/* Header */}
-			<div className="sticky top-20 z-30 flex items-center justify-between mb-6 bg-[#1E1F22]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg shadow-black/20">
+			<div className="page-heading">
 				<div>
-					<h1 className="text-xl font-black tracking-tight text-white uppercase text-glow-sushi/10">Staff Members</h1>
-					<p className="text-xs text-zinc-300 font-semibold mt-1">
+					<h1 className="text-xl font-medium tracking-tight text-white ">Staff Members</h1>
+					<p className="text-[13px] text-zinc-300 font-semibold mt-1">
 						Control who can manage tickets in this server.
 					</p>
 				</div>
 				<button
 					onClick={handleSave}
 					disabled={saving}
-					className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer ${
+					className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-colors duration-200 active:scale-95 disabled:opacity-60 shrink-0 cursor-pointer ${
 						saved
 							? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
-							: "bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 hover:-translate-y-0.5"
+							: "bg-zinc-100 hover:bg-white text-zinc-950   hover:-translate-y-0.5"
 					}`}
 				>
 					<Save className="h-4 w-4" />
@@ -178,7 +178,7 @@ export default function StaffPage() {
 					title="Authorized Members"
 					description="Individual users who can manage tickets."
 					action={
-						<span className="rounded-full border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-1 text-xs font-semibold text-zinc-400">
+						<span className="rounded-full border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-1 text-[13px] font-semibold text-zinc-400">
 							<Users className="inline h-3 w-3 mr-1 -mt-0.5" />
 							{selectedMemberIds.length}
 						</span>
@@ -194,7 +194,7 @@ export default function StaffPage() {
 						<DarkChipList
 							items={authorizedMembers}
 							onRemove={removeMember}
-							emptyMessage="No authorized members — add one above."
+							emptyMessage="No authorized members. Add one above."
 						/>
 					</div>
 				</SectionCard>
@@ -204,7 +204,7 @@ export default function StaffPage() {
 					title="Authorized Roles"
 					description="Anyone with these roles can manage tickets."
 					action={
-						<span className="rounded-full border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-1 text-xs font-semibold text-zinc-400">
+						<span className="rounded-full border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-1 text-[13px] font-semibold text-zinc-400">
 							<Shield className="inline h-3 w-3 mr-1 -mt-0.5" />
 							{selectedRoleIds.length}
 						</span>
@@ -220,7 +220,7 @@ export default function StaffPage() {
 						<DarkChipList
 							items={authorizedRoles}
 							onRemove={removeRole}
-							emptyMessage="No authorized roles — add one above."
+							emptyMessage="No authorized roles. Add one above."
 						/>
 					</div>
 				</SectionCard>

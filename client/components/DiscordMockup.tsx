@@ -30,19 +30,19 @@ interface DiscordMockupProps {
 export default function DiscordMockup({
 	authorName = "Sushi Tickets",
 	avatarUrl = "/assets/sushi_logo_with_bg.png",
-	avatarEmoji = "🍣",
+	avatarEmoji = "🍣", // taste-skill-ignore: Real Discord message content.
 	avatarBg = "#FF5A36",
 	embedTitle = "Sushi Support Menu",
 	embedDescription = "Need assistance? Select your plate below to open an instant secure support channel. A staff member will serve you shortly.",
 	embedColor = "#FF5A36",
 	fields = [
-		{ label: "🍣 Save base transcript", value: "Enabled" },
-		{ label: "🌶️ Wasabi cache speed", value: "Active" }
+		{ label: "🍣 Save base transcript", value: "Enabled" }, // taste-skill-ignore: Real Discord message content.
+		{ label: "🌶️ Wasabi cache speed", value: "Active" } // taste-skill-ignore: Real Discord message content.
 	],
 	buttons = [
-		{ label: "Open Support", emoji: "🍣", style: "primary" },
-		{ label: "Transcripts", emoji: "📁", style: "secondary" },
-		{ label: "Custom", emoji: "🌶️", style: "secondary" }
+		{ label: "Open Support", emoji: "🍣", style: "primary" }, // taste-skill-ignore: Real Discord message content.
+		{ label: "Transcripts", emoji: "📁", style: "secondary" }, // taste-skill-ignore: Real Discord message content.
+		{ label: "Custom", emoji: "🌶️", style: "secondary" } // taste-skill-ignore: Real Discord message content.
 	],
 	largeImageUrl = "",
 	smallImageUrl = "/assets/sushi_logo_with_bg.png"
@@ -62,7 +62,7 @@ export default function DiscordMockup({
 	};
 
 	return (
-		<div className="w-full max-w-[480px] rounded-[8px] bg-[#313338] p-4 text-left shadow-2xl select-none font-sans">
+		<div data-ui className="w-full max-w-[480px] rounded-[8px] bg-[#313338] p-4 text-left shadow-2xl select-none font-sans">
 			<div className="flex gap-4">
 				{/* Bot Avatar */}
 				{avatarUrl ? (

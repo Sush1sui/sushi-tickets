@@ -2,115 +2,48 @@
 
 import Link from "next/link";
 import useAuth from "../lib/context/auth";
-import {
-  ShieldCheck,
-  FileText,
-  Activity,
-  ExternalLink,
-  LogOut,
-  Terminal,
-  Layout,
-  Utensils,
-  Award,
-  Flame,
-  Zap,
-  CheckCircle2,
-} from "lucide-react";
+import { ExternalLink, Layout } from "lucide-react";
 import DiscordMockup from "../components/DiscordMockup";
 import LoadingScreen from "../components/LoadingScreen";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function Home() {
-  const { user, authLoading, login, logout } = useAuth();
+  const { user, authLoading, login } = useAuth();
 
   if (authLoading) {
     return <LoadingScreen />;
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#1E1F22] text-zinc-100 font-sans selection:bg-[#FF5A36]/30">
+    <div className="site-page">
       {/* Main Grid Wrapper */}
-      <div className="relative mx-auto max-w-7xl px-6 py-8 md:py-16 flex flex-col min-h-screen justify-between gap-12">
+      <div className="site-frame">
         {/* Top Header */}
         <Navbar />
 
+        <main>
         {/* Brand New Split Asymmetric Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center my-auto">
+        <div className="home-hero">
           {/* LEFT COLUMN: Bold Typography & Structured Onboarding (55%) */}
-          <div className="lg:col-span-7 flex flex-col text-left items-start space-y-6">
+          <div className="home-intro">
             {/* Active Status Pill */}
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-400 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-              Sushi Tickets Online
-            </div>
+
 
             {/* Big Bold Headline */}
-            <h1 className="text-5xl sm:text-6xl xl:text-7xl font-black tracking-tight leading-none text-white uppercase">
-              Roll out premium <br />
-              support with <br />
-              <span className="text-[#FF5A36] text-glow-sushi/25">
-                Sushi Tickets.
-              </span>
-            </h1>
+            <h1>Support, served<br />with Sushi Tickets.</h1>
 
             {/* Core Description */}
-            <p className="text-zinc-300 text-base sm:text-lg leading-relaxed max-w-xl font-medium">
+            <p className="home-description">
               Manage your Discord support tickets with clean, easy-to-use button
               menus and secure, easy-to-configure conversation logs.
             </p>
 
-            {/* Visual Onboarding Steps */}
-            <div className="space-y-4 w-full max-w-md pt-3">
-              <div className="flex items-start gap-4 group">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-zinc-900/60 border border-white/10 text-xs font-black text-zinc-400 group-hover:border-[#FF5A36] group-hover:text-[#FF5A36] transition-all duration-300 shadow-inner">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-zinc-100">
-                    Log In with Discord
-                  </h4>
-                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
-                    Connect securely using your Discord account to see your
-                    servers.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 group">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-zinc-900/60 border border-white/10 text-xs font-black text-zinc-400 group-hover:border-emerald-500 group-hover:text-emerald-400 transition-all duration-300 shadow-inner">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-zinc-100">
-                    Create Ticket Panels
-                  </h4>
-                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
-                    Design custom buttons or selections and send them to your
-                    channels.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 group">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-zinc-900/60 border border-white/10 text-xs font-black text-zinc-400 group-hover:border-[#FF5A36] group-hover:text-[#FF5A36] transition-all duration-300 shadow-inner">
-                  3
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-zinc-100">
-                    Save Transcripts
-                  </h4>
-                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
-                    Choose a log channel, and completed conversations will be
-                    saved as web links.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Action Block */}
-            <div className="pt-6 w-full sm:w-auto">
+            <div className="home-action">
               {user ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                  <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 px-4 py-3 backdrop-blur-md">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="home-user">
                     {user.image ? (
                       <img
                         src={user.image}
@@ -128,7 +61,7 @@ export default function Home() {
                   </div>
                   <Link
                     href="/servers"
-                    className="group flex items-center justify-center gap-2 rounded-xl bg-[#FF5A36] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-orange-950/20 hover:bg-[#FF6B4A] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 active:scale-95"
+                    className="home-primary-action"
                   >
                     <Layout className="h-4 w-4" />
                     Manage Servers
@@ -138,7 +71,7 @@ export default function Home() {
               ) : (
                 <button
                   onClick={login}
-                  className="group w-full sm:w-auto flex items-center justify-center gap-3 rounded-xl bg-[#FF5A36] px-8 py-4 text-sm font-extrabold text-white shadow-lg shadow-orange-950/30 hover:bg-[#FF6B4A] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 active:scale-95"
+                  className="home-primary-action"
                 >
                   <svg
                     className="h-5 w-5 fill-current"
@@ -151,28 +84,73 @@ export default function Home() {
                 </button>
               )}
             </div>
+
+            {/* Visual Onboarding Steps */}
+            <div className="home-steps">
+              <div className="flex items-start gap-4 group">
+                <div className="home-step-number">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100">
+                    Log In with Discord
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
+                    Connect securely using your Discord account to see your
+                    servers.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 group">
+                <div className="home-step-number">
+                  2
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100">
+                    Create Ticket Panels
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
+                    Design custom buttons or selections and send them to your
+                    channels.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 group">
+                <div className="home-step-number">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100">
+                    Save Transcripts
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed font-medium">
+                    Choose a log channel, and completed conversations will be
+                    saved as web links.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+
           </div>
 
           {/* RIGHT COLUMN: Reusable Tactile Discord Message Preview (45%) */}
-          <div className="lg:col-span-5 flex justify-center w-full">
-            <DiscordMockup />
+          <div className="home-preview">
+            <div className="home-preview-content"><DiscordMockup /></div>
           </div>
         </div>
 
         {/* Beautiful Vertical Menu (Features Section) */}
-        <section className="border-t border-white/5 pt-12">
-          <div className="max-w-2xl text-left space-y-2 mb-8">
-            <span className="text-xs uppercase tracking-widest font-black text-[#FF5A36] text-glow-sushi">
-              Sushi Features
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white uppercase">
-              Everything You Need for Server Support
+        <section className="home-features">
+          <div className="home-feature-heading">
+
+            <h2 className="home-section-title">
+              Built for server support
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex gap-4 items-start p-6 rounded-2xl bg-white/2 border border-white/0 hover:border-white/5 hover:bg-white/5 transition-all duration-300 shadow-sm">
-              <Award className="h-7 w-7 text-[#FF5A36] shrink-0 mt-0.5 filter drop-shadow-[0_0_6px_rgba(255,90,54,0.3)]" />
+          <div className="home-feature-list">
+            <div className="home-feature">
               <div>
                 <h3 className="font-bold text-zinc-100 text-base">
                   Clean Conversation Transcripts
@@ -184,8 +162,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex gap-4 items-start p-6 rounded-2xl bg-white/2 border border-white/0 hover:border-white/5 hover:bg-white/5 transition-all duration-300 shadow-sm">
-              <ShieldCheck className="h-7 w-7 text-emerald-400 shrink-0 mt-0.5 filter drop-shadow-[0_0_6px_rgba(52,211,153,0.3)]" />
+            <div className="home-feature">
               <div>
                 <h3 className="font-bold text-zinc-100 text-base">
                   Role & Staff Permissions
@@ -197,8 +174,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex gap-4 items-start p-6 rounded-2xl bg-white/2 border border-white/0 hover:border-white/5 hover:bg-white/5 transition-all duration-300 shadow-sm">
-              <CheckCircle2 className="h-7 w-7 text-[#FF5A36] shrink-0 mt-0.5 filter drop-shadow-[0_0_6px_rgba(255,90,54,0.3)]" />
+            <div className="home-feature">
               <div>
                 <h3 className="font-bold text-zinc-100 text-base">
                   Fully Customizable Panels
@@ -211,6 +187,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        </main>
 
         {/* Simple Footer */}
         <Footer />

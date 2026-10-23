@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { AlertTriangle, Info, X } from "lucide-react";
+import { Dialog } from "radix-ui";
 
 interface DarkConfirmModalProps {
   isOpen: boolean;
@@ -24,70 +25,69 @@ export default function DarkConfirmModal({
   cancelText = "Cancel",
   type = "danger",
 }: DarkConfirmModalProps) {
+  const previousFocus = useRef<HTMLElement | null>(null);
   if (!isOpen) return null;
 
   const getIcon = () => {
     switch (type) {
       case "info":
-        return <Info className="h-6 w-6 text-[#FF5A36] drop-shadow-[0_0_6px_rgba(255,90,54,0.3)]" />;
+        return <Info className="h-6 w-6 text-[#FF5A36]" />;
       case "warning":
-        return <AlertTriangle className="h-6 w-6 text-[#FF5A36] drop-shadow-[0_0_6px_rgba(255,90,54,0.3)]" />;
+        return <AlertTriangle className="h-6 w-6 text-[#FF5A36]" />;
       case "danger":
       default:
-        return <AlertTriangle className="h-6 w-6 text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.3)]" />;
+        return <AlertTriangle className="h-6 w-6 text-red-400" />;
     }
   };
 
   const getConfirmButtonClass = () => {
     switch (type) {
       case "info":
-        return "bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 active:scale-95";
+        return "bg-zinc-100 hover:bg-white text-zinc-950   active:scale-95";
       case "warning":
-        return "bg-[#FF5A36] hover:bg-[#FF6B4A] text-white shadow-lg shadow-orange-950/20 active:scale-95";
+        return "bg-zinc-100 hover:bg-white text-zinc-950   active:scale-95";
       case "danger":
       default:
-        return "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-950/20 active:scale-95";
+        return "bg-red-300 hover:bg-red-200 text-red-950 active:scale-95";
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog.Portal>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-zinc-950/65 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
-        onClick={onClose} 
-      />
+      <Dialog.Overlay className="fixed inset-0 z-50 bg-zinc-950/75" />
 
       {/* Modal Box */}
-      <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/5 bg-[#2B2D31] p-6 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        
+      <Dialog.Content
+        onOpenAutoFocus={() => { previousFocus.current = document.activeElement as HTMLElement; }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); previousFocus.current?.focus(); }}
+        className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[#2B2D31] p-6 animate-in fade-in zoom-in-95 duration-150">
+
         {/* Decorative subtle background brand light */}
-        <div className={`absolute -top-12 -left-12 h-24 w-24 rounded-full blur-[40px] opacity-15 pointer-events-none ${
-          type === "danger" ? "bg-red-500" : "bg-[#FF5A36]"
-        }`} />
 
         {/* Close Button */}
         <button
+          type="button"
+          aria-label="Close confirmation"
           onClick={onClose}
-          className="absolute top-4 right-4 rounded-lg p-1 text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-all cursor-pointer"
+          className="absolute top-4 right-4 rounded-lg p-1 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Content */}
         <div className="flex gap-4 items-start mt-2">
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-white/2 ${
-            type === "danger" ? "border-red-500/20" : "border-[#FF5A36]/20"
-          }`}>
+          <div className="shrink-0 pt-1">
             {getIcon()}
           </div>
           <div className="flex-1 space-y-1.5 min-w-0">
-            <h3 className="text-sm font-extrabold text-white tracking-tight uppercase leading-none">
+            <Dialog.Title asChild><h3 className="text-base font-medium text-white tracking-tight leading-none">
               {title}
-            </h3>
-            <p className="text-xs text-zinc-400 font-semibold leading-relaxed">
+            </h3></Dialog.Title>
+            <Dialog.Description asChild><p className="text-sm text-zinc-300 leading-relaxed">
               {message}
-            </p>
+            </p></Dialog.Description>
           </div>
         </div>
 
@@ -96,7 +96,7 @@ export default function DarkConfirmModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/5 bg-white/5 px-4 py-2.5 text-xs font-bold text-zinc-400 hover:bg-white/10 hover:text-zinc-200 hover:border-white/10 transition-all active:scale-95 cursor-pointer"
+            className="rounded-md border border-white/5 bg-white/5 px-4 py-2.5 text-[13px] font-medium text-zinc-400 hover:bg-white/10 hover:text-zinc-200 hover:border-white/10 transition-colors active:scale-95 cursor-pointer"
           >
             {cancelText}
           </button>
@@ -106,12 +106,13 @@ export default function DarkConfirmModal({
               onConfirm();
               onClose();
             }}
-            className={`rounded-xl px-4 py-2.5 text-xs font-black transition-all cursor-pointer ${getConfirmButtonClass()}`}
+            className={`rounded-xl px-4 py-2.5 text-xs font-black transition-colors cursor-pointer ${getConfirmButtonClass()}`}
           >
             {confirmText}
           </button>
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Portal>
+    </Dialog.Root>
   );
 }

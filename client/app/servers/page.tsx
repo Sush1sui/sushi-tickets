@@ -16,36 +16,36 @@ function ServerCard({ server }: { server: ServerSummary }) {
   return (
     <button
       onClick={() => router.push(`/servers/${server.id}`)}
-      className="group relative flex items-center gap-4 rounded-2xl border border-white/5 bg-zinc-900/10 p-5 text-left backdrop-blur-md hover:border-[#FF5A36]/40 hover:bg-white/5 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF5A36]/2 active:scale-[0.99] w-full shadow-md"
+      className="server-row"
     >
       {/* Server Icon */}
       {server.iconUrl ? (
         <img
           src={server.iconUrl}
           alt={server.name}
-          className="h-12 w-12 rounded-full shrink-0 ring-2 ring-white/10 group-hover:ring-[#FF5A36]/50 transition-all"
+          className="h-12 w-12 rounded-full shrink-0 ring-2 ring-white/10 group-hover:ring-[#FF5A36]/50 transition-colors"
         />
       ) : (
-        <div className="h-12 w-12 rounded-full shrink-0 bg-zinc-950/60 border border-white/10 ring-2 ring-white/5 group-hover:ring-[#FF5A36]/50 flex items-center justify-center text-lg font-black text-zinc-200 transition-all select-none">
+        <div className="h-12 w-12 rounded-full shrink-0 bg-zinc-950/60 border border-white/10 ring-2 ring-white/5 group-hover:ring-[#FF5A36]/50 flex items-center justify-center text-lg font-medium text-zinc-200 transition-colors select-none">
           {server.name[0]?.toUpperCase()}
         </div>
       )}
 
       {/* Server Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-extrabold text-zinc-100 text-sm truncate group-hover:text-white transition-colors tracking-tight">
+        <p className="font-medium text-zinc-100 text-sm truncate group-hover:text-white transition-colors tracking-tight">
           {server.name}
         </p>
       </div>
 
       {/* Arrow Icon */}
       <div className="flex items-center gap-2 shrink-0">
-        <Settings className="h-4 w-4 text-zinc-400 group-hover:text-[#FF5A36] group-hover:rotate-45 transition-all duration-500" />
-        <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 group-hover:translate-x-0.5 transition-all" />
+        <Settings className="h-4 w-4 text-zinc-400 group-hover:text-[#FF5A36] group-hover:rotate-45 transition-colors duration-500" />
+        <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-300 group-hover:translate-x-0.5 transition-colors" />
       </div>
 
       {/* Hover glow edge */}
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none ring-1 ring-inset ring-[#FF5A36]/20" />
+      <div className="hidden" />
     </button>
   );
 }
@@ -69,12 +69,12 @@ export default function ServersPage() {
         <img
           src="/assets/sushi_logo_without_bg.png"
           alt="Sushi Logo"
-          className="h-14 w-14 object-contain filter drop-shadow-[0_0_12px_rgba(255,90,54,0.5)] select-none mb-2 hover:scale-105 transition-all duration-300"
+          className="h-14 w-14 object-contain filter select-none mb-2 hover:scale-105 transition-colors duration-300"
         />
         <p className="text-zinc-300 text-sm font-semibold">You need to log in first.</p>
         <Link
           href="/"
-          className="rounded-xl bg-[#FF5A36] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#FF6B4A] shadow-md shadow-orange-950/15 transition-all duration-200 active:scale-95"
+          className="rounded-md bg-[#FF5A36] px-5 py-2.5 text-sm font-medium text-[#1e1f22] hover:bg-[#FF6B4A] transition-colors duration-200 active:scale-95"
         >
           Go to Home
         </Link>
@@ -83,17 +83,17 @@ export default function ServersPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#1E1F22] text-zinc-100 font-sans selection:bg-[#FF5A36]/30">
-      <div className="relative mx-auto max-w-5xl px-6 py-8 md:py-16 flex flex-col min-h-screen justify-between gap-12">
+    <div className="site-page">
+      <div className="site-frame">
         {/* Header */}
         <Navbar />
 
         {/* Page Content */}
-        <main className="flex-1">
+        <main className="server-directory">
           {/* Page Title */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight uppercase text-glow-sushi/10">
+              <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-white leading-tight ">
                 Your Servers
               </h1>
               <p className="text-zinc-400 text-sm mt-2 font-medium">
@@ -105,7 +105,7 @@ export default function ServersPage() {
                 href={inviteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="self-start sm:self-center flex items-center gap-2 rounded-xl bg-[#FF5A36] px-4.5 py-2.5 text-xs font-bold text-white hover:bg-[#FF6B4A] shadow-md shadow-orange-950/15 hover:shadow-[#FF5A36]/20 transition-all duration-200 active:scale-95"
+                className="self-start sm:self-center flex items-center gap-2 rounded-md bg-[#FF5A36] px-4.5 py-2.5 text-[13px] font-medium text-[#1e1f22] hover:bg-[#FF6B4A] transition-colors duration-200 active:scale-95"
               >
                 <UserPlus className="h-4 w-4" />
                 Invite Bot
@@ -116,14 +116,14 @@ export default function ServersPage() {
           {/* Server Grid */}
           {servers.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/5 bg-zinc-900/10 shadow-inner">
-                <ServerCrash className="h-7 w-7 text-zinc-500" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-white/5 bg-zinc-900/10 ">
+                <ServerCrash className="h-7 w-7 text-zinc-400" />
               </div>
               <div>
-                <p className="text-zinc-200 font-bold text-sm">
+                <p className="text-zinc-200 font-medium text-sm">
                   No servers found
                 </p>
-                <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed font-medium">
+                <p className="text-zinc-400 text-[13px] mt-1.5 leading-relaxed font-medium">
                   Make sure Sushi Tickets bot is added to at least one server.
                 </p>
               </div>
@@ -131,13 +131,13 @@ export default function ServersPage() {
                 href={inviteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:border-white/20 hover:text-white transition-all shadow-md"
+                className="rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] font-medium text-zinc-300 hover:border-white/20 hover:text-white transition-colors "
               >
                 Add Bot to Server
               </a>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="server-list">
               {servers.map((server) => (
                 <ServerCard key={server.id} server={server} />
               ))}

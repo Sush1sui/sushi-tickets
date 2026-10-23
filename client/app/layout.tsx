@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./overhaul.css";
 import AuthProvider from "../lib/providers/auth";
 
 const inter = Inter({

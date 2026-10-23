@@ -53,7 +53,7 @@ const humanPreview = (startUnix: number, endUnix: number) => {
     rel = mins <= 90 ? `opens in ${mins} min` : `opens in ${Math.round(mins / 60)} h`;
   } else if (endUnix > now) {
     const mins = Math.round((endUnix - now) / 60);
-    rel = mins <= 90 ? `open now — closes in ${mins} min` : `open now — closes in ${Math.round(mins / 60)} h`;
+    rel = mins <= 90 ? `open now. closes in ${mins} min` : `open now. closes in ${Math.round(mins / 60)} h`;
   } else {
     rel = "already over";
   }
@@ -77,7 +77,7 @@ const validateDraftTimes = (
   if (!startUnix || !endUnix) return "Pick both an open and a close time.";
   if (endUnix <= startUnix) return "Close time must be after open time.";
   const now = Math.floor(Date.now() / 1000);
-  if (endUnix <= now) return "Close time must be in the future — or delete the window instead.";
+  if (endUnix <= now) return "Close time must be in the future. or delete the window instead.";
   for (const other of others) {
     if (startUnix < other.endTime && other.startTime < endUnix) {
       return `Overlaps another window (${formatWindowRange(other.startTime, other.endTime)}).`;
@@ -165,23 +165,23 @@ function WindowEditor({
         </FormLabel>
       </div>
       {preview && (
-        <p className="text-[11px] text-zinc-500 font-medium">{preview}</p>
+        <p className="text-[13px] text-zinc-400 font-medium">{preview}</p>
       )}
       {error && (
-        <p className="text-[11px] font-semibold text-red-400">{error}</p>
+        <p className="text-[13px] font-semibold text-red-400">{error}</p>
       )}
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onSubmit}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FF5A36] hover:bg-[#FF6B4A] text-white transition-all cursor-pointer"
+          className="px-3.5 py-2 rounded-md text-[13px] font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition-colors cursor-pointer"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-all cursor-pointer"
+          className="px-3.5 py-2 rounded-md text-[13px] font-medium border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-colors cursor-pointer"
         >
           Cancel
         </button>
@@ -313,7 +313,7 @@ export default function ScheduleWindows({
               setFrozenNow(Math.floor(Date.now() / 1000));
               setFrozen(true);
             }}
-            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-bold text-zinc-400 hover:text-zinc-200 hover:border-white/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-white/20 transition-colors cursor-pointer"
             title={
               frozen
                 ? "Resume live status updates"
@@ -327,7 +327,7 @@ export default function ScheduleWindows({
             type="button"
             onClick={startAdding}
             disabled={adding !== null}
-            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[13px] font-medium text-zinc-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Window
@@ -336,27 +336,27 @@ export default function ScheduleWindows({
       }
     >
       <div className="flex items-center gap-1.5 mb-4">
-        <Clock className="h-3 w-3 text-zinc-500" />
-        <p className="text-[11px] text-zinc-500 font-medium">
-          Times shown in your local timezone ({gmtLabel()}) — saved as UTC, so
+        <Clock className="h-3 w-3 text-zinc-400" />
+        <p className="text-[13px] text-zinc-400 font-medium">
+          Times shown in your local timezone ({gmtLabel()}). Saved as UTC, so
           they&apos;re correct for everyone. Changes apply when you press Save
           Changes.
         </p>
       </div>
 
       {error && (
-        <p className="mb-4 text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl">
+        <p className="mb-4 text-[13px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-md">
           {error}
         </p>
       )}
 
       {adding && (
-        <div className="mb-2 rounded-xl border border-dashed border-[#FF5A36]/40 bg-[#FF5A36]/5 p-3.5">
+        <div className="mb-2 rounded-md border border-dashed border-[#FF5A36]/40 bg-[#FF5A36]/5 p-3.5">
           <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 rounded-md border border-[#FF5A36]/40 bg-[#FF5A36]/10 text-[10px] font-black tracking-widest text-[#FF5A36]">
+            <span className="px-2 py-0.5 rounded-md border border-[#FF5A36]/40 bg-[#FF5A36]/10 text-[13px] font-medium text-[#FF5A36]">
               NEW
             </span>
-            <span className="text-[11px] text-zinc-400 font-semibold">
+            <span className="text-[13px] text-zinc-400 font-semibold">
               Adding a new window
             </span>
           </div>
@@ -378,8 +378,8 @@ export default function ScheduleWindows({
       )}
 
       {sortedWindows.length === 0 && !adding ? (
-        <p className="text-xs text-zinc-500 italic text-center py-4">
-          No schedule windows — this panel is always open. Click &quot;Add
+        <p className="text-[13px] text-zinc-400 italic text-center py-4">
+          No schedule windows. This panel is always open. Click &quot;Add
           Window&quot; to queue one.
         </p>
       ) : (
@@ -392,7 +392,7 @@ export default function ScheduleWindows({
             return (
               <div
                 key={`${win.id ?? "new"}-${index}`}
-                className={`rounded-xl border p-3.5 transition-all ${
+                className={`rounded-xl border p-3.5 transition-colors ${
                   isEditing
                     ? "border-[#FF5A36]/40 bg-[#FF5A36]/5"
                     : "border-white/5 bg-white/[0.02] hover:border-white/10"
@@ -424,13 +424,13 @@ export default function ScheduleWindows({
                         </span>
                         {!isSavedRow && (
                           <span
-                            className="px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-[10px] font-black tracking-widest text-zinc-500"
-                            title="This window is not saved yet — press Save Changes below to persist it"
+                            className="px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-[13px] font-medium text-zinc-400"
+                            title="This window is not saved yet. press Save Changes below to persist it"
                           >
                             NEW
                           </span>
                         )}
-                        <span className="text-xs font-mono text-zinc-300 truncate">
+                        <span className="text-[13px] font-mono text-zinc-300 truncate">
                           {formatWindowRange(win.startTime, win.endTime)}
                         </span>
                       </div>
@@ -443,7 +443,7 @@ export default function ScheduleWindows({
                         }
                         disabled={win.closedEarly || status === "past"}
                         title="Close this window early (applies when you save)"
-                        className="p-2 rounded-xl text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30 disabled:hover:text-zinc-400 disabled:cursor-not-allowed"
+                        className="p-2 rounded-md text-zinc-400 hover:text-[#FF5A36] hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-30 disabled:hover:text-zinc-400 disabled:cursor-not-allowed"
                       >
                         <Ban className="h-4 w-4" />
                       </button>
@@ -454,7 +454,7 @@ export default function ScheduleWindows({
                         }
                         disabled={!win.closedEarly}
                         title="Reopen window (undoes early close)"
-                        className="p-2 rounded-xl text-zinc-400 hover:text-[#57f287] hover:bg-white/5 transition-all cursor-pointer disabled:opacity-30 disabled:hover:text-zinc-400 disabled:cursor-not-allowed"
+                        className="p-2 rounded-md text-zinc-400 hover:text-[#57f287] hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-30 disabled:hover:text-zinc-400 disabled:cursor-not-allowed"
                       >
                         <RotateCcw className="h-4 w-4" />
                       </button>
@@ -462,7 +462,7 @@ export default function ScheduleWindows({
                         type="button"
                         onClick={() => startEditing(index)}
                         title="Edit window"
-                        className="p-2 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-all cursor-pointer"
+                        className="p-2 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -473,7 +473,7 @@ export default function ScheduleWindows({
                           setEditingIndex(null);
                         }}
                         title="Remove window (applies when you save)"
-                        className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-white/5 transition-all cursor-pointer"
+                        className="p-2 rounded-md text-zinc-400 hover:text-red-400 hover:bg-white/5 transition-colors cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
