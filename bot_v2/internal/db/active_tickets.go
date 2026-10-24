@@ -65,6 +65,24 @@ func (q *Queries) GetActiveTicketChannelsByUser(ctx context.Context, serverConfi
 	return items, nil
 }
 
+func (q *Queries) GetActiveTicketChannelsByServer(ctx context.Context, serverConfigID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, `SELECT channel_id FROM active_ticket WHERE server_config_id = $1`, serverConfigID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	channels := make([]string, 0)
+	for rows.Next() {
+		var channelID string
+		if err := rows.Scan(&channelID); err != nil {
+			return nil, err
+		}
+		channels = append(channels, channelID)
+	}
+	return channels, rows.Err()
+}
+
 const getActiveTicketByChannel = `
 SELECT user_id, created_at
 FROM active_ticket

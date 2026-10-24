@@ -69,6 +69,8 @@ func StartBot() {
 		}
 	})
 
+	s.AddHandler(tickets.HandleChannelDelete)
+	s.AddHandler(tickets.HandleGuildCreate)
 	s.AddHandler(func(sess *discordgo.Session, g *discordgo.GuildCreate) {
 		if g == nil {
 			return
