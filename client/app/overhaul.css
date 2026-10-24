@@ -75,9 +75,15 @@
 .home-access-dot--billing { background: #3ba55d; }
 .home-panel-preview { min-width: 0; margin-top: 28px; }
 .home-panel-preview > [data-ui] { min-height: 200px; }
-.site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 0; font-size: 13px; color: #a9adb6; }
+.site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 40px; padding: 32px 0; font-size: 13px; color: #a9adb6; }
+.site-footer-identity { display: grid; gap: 4px; }
+.site-footer-brand { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: #dbdee1; font-size: 14px; font-weight: 600; }
+.site-footer-brand img { width: 24px; height: 24px; object-fit: contain; }
+.site-footer-copyright { font-size: 12px; line-height: 1.5; }
+.site-footer-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; }
 .site-footer-link { display: inline-flex; align-items: center; gap: 8px; color: #dbdee1; min-height: 44px; }
 .site-footer-link:hover { color: white; }
+.site-footer a:focus-visible { outline: 2px solid #ff947d; outline-offset: 4px; border-radius: 2px; }
 .server-list { display: grid; gap: 12px; }
 .server-row { display: flex; align-items: center; gap: 20px; min-width: 0; width: 100%; padding: 24px; background: #292b30; border-radius: 8px; text-align: left; transition: background-color 150ms; }
 .server-row:hover { background: #34363d; }

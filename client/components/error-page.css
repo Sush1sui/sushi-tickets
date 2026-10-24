@@ -1,0 +1,17 @@
+.failure-page { min-height: 100dvh; background: #1e1f22; color: #f4f4f5; font-family: var(--font-inter, ui-sans-serif), system-ui, sans-serif; }
+.failure-frame { display: flex; flex-direction: column; min-height: 100dvh; max-width: 1280px; margin: 0 auto; padding: 32px; }
+.failure-brand { display: inline-flex; align-items: center; min-height: 44px; font-size: 20px; font-weight: 600; }
+.failure-content { display: flex; flex: 1; flex-direction: column; justify-content: center; align-items: flex-start; padding: 80px 0; }
+.failure-content h1 { max-width: 20ch; font-size: clamp(36px, 5vw, 58px); line-height: 1.1; letter-spacing: -.03em; font-weight: 600; text-wrap: balance; }
+.failure-content p { max-width: 52ch; margin-top: 24px; color: #b4b7bf; font-size: 18px; line-height: 1.7; }
+.failure-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 32px; }
+.failure-actions a, .failure-actions button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border-radius: 6px; font-size: 16px; font-weight: 500; }
+.failure-actions button, .failure-actions a:only-child { background: #ff5a36; color: #1e1f22; cursor: pointer; }
+.failure-actions button:hover, .failure-actions a:only-child:hover { background: #ff795c; }
+.failure-actions a:not(:only-child) { text-decoration: underline; text-underline-offset: 5px; }
+.failure-page a:focus-visible, .failure-page button:focus-visible { outline: 2px solid #ff947d; outline-offset: 5px; }
+@media (max-width: 639px) {
+  .failure-frame { padding: 16px; }
+  .failure-content { padding: 64px 0; }
+  .failure-content p { font-size: 16px; }
+}
