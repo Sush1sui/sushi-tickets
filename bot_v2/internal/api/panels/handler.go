@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Sush1sui/FNS_BOT/internal/bot"
+	"github.com/Sush1sui/FNS_BOT/internal/bot/tickets"
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/Sush1sui/FNS_BOT/internal/utils"
 	"github.com/bwmarrin/discordgo"
@@ -83,8 +84,6 @@ func validateMultiPanelPayload(p MultiPanelPayload) utils.ValidationErrors {
 	}
 	return errs
 }
-
-
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -332,6 +331,7 @@ func (h *Handler) HandleUpdatePanel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
 	item, err := h.DB.UpdatePanelConfig(context.Background(), db.UpdatePanelConfigParams{
 		ID:                 panelID,
 		ServerConfigID:     serverID,
@@ -407,6 +407,7 @@ func (h *Handler) HandleDeletePanel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ids"})
 		return
 	}
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
 
 	if err := h.DB.RemovePanelFromMultiPanels(context.Background(), serverID, panelID); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to prune multi panels"})
@@ -733,4 +734,3 @@ func applyScheduleSync(w http.ResponseWriter, pool *pgxpool.Pool, panelID int32,
 	}
 	return 0, nil
 }
-

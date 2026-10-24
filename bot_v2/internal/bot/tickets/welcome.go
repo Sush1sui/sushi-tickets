@@ -1,6 +1,7 @@
 package tickets
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 )
 
 func SendWelcomeMessage(
+	ctx context.Context,
 	s *discordgo.Session,
 	channelID string,
 	user *discordgo.User,
@@ -50,8 +52,8 @@ func SendWelcomeMessage(
 		},
 	}
 
-	_, _ = s.ChannelMessageSendComplex(channelID, message)
-	sendQnAMessage(s, channelID, user, qna, embed.Color)
+	_, _ = s.ChannelMessageSendComplex(channelID, message, discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
+	sendQnAMessage(ctx, s, channelID, user, qna, embed.Color)
 }
 
 func buildWelcomeEmbed(user *discordgo.User, welcome db.WelcomeMsgConfig, hasWelcome bool) *discordgo.MessageEmbed {
@@ -95,7 +97,7 @@ func buildWelcomeEmbed(user *discordgo.User, welcome db.WelcomeMsgConfig, hasWel
 	}
 }
 
-func sendQnAMessage(s *discordgo.Session, channelID string, user *discordgo.User, qna []QnA, color int) {
+func sendQnAMessage(ctx context.Context, s *discordgo.Session, channelID string, user *discordgo.User, qna []QnA, color int) {
 	if len(qna) == 0 {
 		return
 	}
@@ -128,5 +130,5 @@ func sendQnAMessage(s *discordgo.Session, channelID string, user *discordgo.User
 		Embeds:  []*discordgo.MessageEmbed{embed},
 	}
 
-	_, _ = s.ChannelMessageSendComplex(channelID, message)
+	_, _ = s.ChannelMessageSendComplex(channelID, message, discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -217,7 +218,9 @@ func canCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
 	return false
 }
 
-func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, modalTitle string, questions []QuestionData) {
+func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, modalTitle string, questions []QuestionData, version string, options ...discordgo.RequestOption) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 	inputs := make([]discordgo.MessageComponent, 0, 5)
 	limit := len(questions)
 	if limit > 5 {
@@ -264,18 +267,18 @@ func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, pa
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
-			CustomID:   fmt.Sprintf("%s%d", panelModalPrefix, panelID),
+			CustomID:   fmt.Sprintf("%s%d:%s", panelModalPrefix, panelID, version),
 			Title:      title,
 			Components: inputs,
 		},
-	})
+	}, append([]discordgo.RequestOption{discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false)}, options...)...)
 }
 
-func loadPanelQuestions(panelID int32) (string, []QuestionData, error) {
+func loadPanelQuestions(ctx context.Context, panelID int32) (string, []QuestionData, error) {
 	if queries == nil {
 		return "", nil, fmt.Errorf("queries not set")
 	}
-	row, err := queries.GetPanelQuestions(context.Background(), panelID)
+	row, err := queries.GetPanelQuestions(ctx, panelID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -390,27 +393,36 @@ func buildTicketChannelName(style, username, interactionID string) string {
 	return name
 }
 
-func respondDeferred(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+func respondDeferred(s *discordgo.Session, i *discordgo.InteractionCreate, options ...discordgo.RequestOption) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	started := time.Now()
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags: discordgo.MessageFlagsEphemeral,
 		},
-	})
+	}, append([]discordgo.RequestOption{discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false)}, options...)...)
+	log.Printf("ticket_ack failed=%t duration_ms=%d", err != nil, time.Since(started).Milliseconds())
+	return err
 }
 
-func respondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
+func respondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string, options ...discordgo.RequestOption) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: message,
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
-	})
+	}, append([]discordgo.RequestOption{discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false)}, options...)...)
 }
 
 func editEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
-	_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message})
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message}, discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
 }
 
 func extractModalAnswersMap(data discordgo.ModalSubmitInteractionData) map[int]string {

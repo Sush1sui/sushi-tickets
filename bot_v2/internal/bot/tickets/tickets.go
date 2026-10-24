@@ -12,7 +12,6 @@ import (
 
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/bwmarrin/discordgo"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -49,44 +48,66 @@ func HandleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	data := i.ModalSubmitData()
-	panelID, ok := parsePanelID(data.CustomID, panelModalPrefix)
+	panelCustomID, _, _ := strings.Cut(data.CustomID, ":")
+	panelID, ok := parsePanelID(panelCustomID, panelModalPrefix)
 	if !ok {
 		return
 	}
 
-	_, dbQuestions, err := loadPanelQuestions(int32(panelID))
-	if err != nil {
-		log.Printf("failed to load questions for modal submit: %v", err)
-	}
-
-	answersMap := extractModalAnswersMap(data)
-	qna := make([]QnA, 0, len(dbQuestions))
-	for idx, q := range dbQuestions {
-		ans := answersMap[idx]
-		qna = append(qna, QnA{Question: q.Label, Answer: ans})
-	}
-
-	// Fallback if DB questions list is empty but modal has answers
-	if len(qna) == 0 && len(answersMap) > 0 {
-		for idx, ans := range answersMap {
-			qna = append(qna, QnA{Question: fmt.Sprintf("Question %d", idx+1), Answer: ans})
-		}
-	}
-
-	respondDeferred(s, i)
-	if err := openTicket(s, i, panelID, qna); err != nil {
-		log.Printf("open ticket failed: %v", err)
-		if err == errMaxTickets {
-			editEphemeral(s, i, "You reached max open tickets. Please close existing tickets.")
-			return
-		}
-		var werr *errWindowClosed
-		if errors.As(err, &werr) {
-			editEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
-			return
-		}
-		editEphemeral(s, i, "Failed to create ticket. Please try again later.")
+	if err := respondDeferred(s, i); err != nil {
 		return
+	}
+	if !panelPolicyMu.TryRLock() {
+		editEphemeral(s, i, "Panel settings are being updated. Please try again.")
+		return
+	}
+	defer panelPolicyMu.RUnlock()
+	submitOpening(s, i, panelID, &data)
+}
+
+func submitOpening(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, data *discordgo.ModalSubmitInteractionData) {
+	if i.Member == nil || i.Member.User == nil {
+		return
+	}
+	key := i.GuildID + ":" + i.Member.User.ID
+	if openingQueue.hasPending(key) {
+		openingQueue.noteDuplicate()
+		editEphemeral(s, i, ticketFailureMessage(errPending))
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	serverID, err := strconv.ParseInt(i.GuildID, 10, 64)
+	if err != nil {
+		editEphemeral(s, i, ticketFailureMessage(err))
+		return
+	}
+	panel, err := loadAdmission(ctx, serverID, panelID)
+	if err != nil {
+		editEphemeral(s, i, ticketFailureMessage(err))
+		return
+	}
+	var qna []QnA
+	if data != nil {
+		_, version, _ := strings.Cut(data.CustomID, ":")
+		if version != panel.version {
+			editEphemeral(s, i, "Panel questions changed. Please open the form again.")
+			return
+		}
+		answersMap := extractModalAnswersMap(*data)
+		for idx, q := range panel.questions {
+			qna = append(qna, QnA{Question: q.Label, Answer: answersMap[idx]})
+		}
+		// Fallback if DB questions list is empty but modal has answers
+		if len(qna) == 0 && len(answersMap) > 0 {
+			for idx, ans := range answersMap {
+				qna = append(qna, QnA{Question: fmt.Sprintf("Question %d", idx+1), Answer: ans})
+			}
+		}
+	}
+	j := &ticketJob{session: s, interaction: i, panelID: panelID, qna: qna, window: panel.window, queuedAt: time.Now(), key: key}
+	if err := openingQueue.enqueue(j); err != nil {
+		editEphemeral(s, i, ticketFailureMessage(err))
 	}
 }
 
@@ -97,78 +118,47 @@ func windowClosedMessage(nextStartTime int64) string {
 	return "Tickets are currently closed for this panel."
 }
 
-func checkScheduleWindow(ctx context.Context, panelID int32) error {
-	has, err := queries.HasAnyScheduleWindow(ctx, panelID)
-	if err != nil {
-		return err
-	}
-	if !has {
-		return nil
-	}
-
-	now := time.Now().Unix()
-	if _, err := queries.GetActiveScheduleWindow(ctx, db.GetActiveScheduleWindowParams{
-		PanelConfigID: panelID,
-		StartTime:     now,
-	}); err == nil {
-		return nil
-	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return err
-	}
-
-	next := int64(0)
-	if w, err := queries.GetNextScheduleWindow(ctx, db.GetNextScheduleWindowParams{
-		PanelConfigID: panelID,
-		StartTime:     now,
-	}); err == nil && w.StartTime > now {
-		next = w.StartTime
-	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return err
-	}
-
-	return &errWindowClosed{NextStartTime: next}
-}
-
 func handlePanelOpen(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32) {
-	if err := checkScheduleWindow(context.Background(), panelID); err != nil {
-		var werr *errWindowClosed
-		if errors.As(err, &werr) {
-			respondEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
-			return
-		}
-		log.Printf("schedule window check failed: %v", err)
+	responseCtx, responseCancel := context.WithTimeout(context.Background(), 2750*time.Millisecond)
+	defer responseCancel()
+	if i.Member == nil || i.Member.User == nil {
+		return
 	}
-
-	modalTitle, questions, err := loadPanelQuestions(panelID)
+	if !panelPolicyMu.TryRLock() {
+		respondEphemeral(s, i, "Panel settings are being updated. Please try again.", discordgo.WithContext(responseCtx))
+		return
+	}
+	defer panelPolicyMu.RUnlock()
+	if openingQueue.hasPending(i.GuildID + ":" + i.Member.User.ID) {
+		respondEphemeral(s, i, ticketFailureMessage(errPending), discordgo.WithContext(responseCtx))
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
+	defer cancel()
+	serverID, err := strconv.ParseInt(i.GuildID, 10, 64)
 	if err != nil {
-		log.Printf("load questions failed: %v", err)
-		respondEphemeral(s, i, "Failed to load panel. Please try again later.")
 		return
 	}
-
-	if len(questions) > 0 {
-		showQuestionsModal(s, i, panelID, modalTitle, questions)
+	panel, err := loadAdmission(ctx, serverID, panelID)
+	if err != nil {
+		respondEphemeral(s, i, ticketFailureMessage(err), discordgo.WithContext(responseCtx))
 		return
 	}
-
-	respondDeferred(s, i)
-	if err := openTicket(s, i, panelID, nil); err != nil {
-		log.Printf("open ticket failed: %v", err)
-		if err == errMaxTickets {
-			editEphemeral(s, i, "You reached max open tickets. Please close existing tickets.")
-			return
-		}
-		var werr *errWindowClosed
-		if errors.As(err, &werr) {
-			editEphemeral(s, i, windowClosedMessage(werr.NextStartTime))
-			return
-		}
-		editEphemeral(s, i, "Failed to create ticket. Please try again later.")
+	if len(panel.questions) > 0 {
+		showQuestionsModal(s, i, panelID, panel.title, panel.questions, panel.version, discordgo.WithContext(responseCtx))
 		return
+	}
+	if err := respondDeferred(s, i, discordgo.WithContext(responseCtx)); err != nil {
+		return
+	}
+	j := &ticketJob{session: s, interaction: i, panelID: panelID, window: panel.window, queuedAt: time.Now(), key: i.GuildID + ":" + i.Member.User.ID}
+	if err := openingQueue.enqueue(j); err != nil {
+		editEphemeral(s, i, ticketFailureMessage(err))
 	}
 }
 
-func openTicket(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, qna []QnA) error {
+func openTicket(ctx context.Context, j *ticketJob) error {
+	s, i, panelID, qna := j.session, j.interaction, j.panelID, j.qna
 	if queries == nil {
 		return fmt.Errorf("queries not set")
 	}
@@ -176,7 +166,6 @@ func openTicket(s *discordgo.Session, i *discordgo.InteractionCreate, panelID in
 		return fmt.Errorf("missing guild/member")
 	}
 
-	ctx := context.Background()
 	serverID, err := strconv.ParseInt(i.GuildID, 10, 64)
 	if err != nil {
 		return err
@@ -187,39 +176,44 @@ func openTicket(s *discordgo.Session, i *discordgo.InteractionCreate, panelID in
 		return err
 	}
 
-	if err := checkScheduleWindow(ctx, panelID); err != nil {
-		return err
-	}
-
 	welcomeMsg, hasWelcome, err := queries.GetPanelWelcome(ctx, panelID)
 	if err != nil {
 		return err
 	}
 
-	serverConfig, _ := queries.GetServerConfig(ctx, serverID)
+	serverConfig, err := queries.GetServerConfig(ctx, serverID)
+	if err != nil {
+		return err
+	}
 	if serverConfig.MaxTicketPerUser > 0 {
 		count, err := queries.CountActiveTicketsByUser(ctx, serverID, i.Member.User.ID)
 		if err != nil {
 			return err
 		}
 		if count >= int64(serverConfig.MaxTicketPerUser) {
-			if s != nil && s.State != nil {
-				channels, err := queries.GetActiveTicketChannelsByUser(ctx, serverID, i.Member.User.ID)
-				if err == nil {
-					for _, channelID := range channels {
-						if _, err := s.State.Channel(channelID); err == nil {
-							continue
-						}
-						if err := queries.DeleteActiveTicketByChannel(ctx, serverID, channelID); err != nil {
-							log.Printf("delete stale active ticket failed: %v", err)
-						}
+			channels, err := queries.GetActiveTicketChannelsByUser(ctx, serverID, i.Member.User.ID)
+			if err != nil {
+				return err
+			}
+			for _, channelID := range channels {
+				if s.State != nil {
+					if _, err := s.State.Channel(channelID); err == nil {
+						continue
 					}
-					count, err = queries.CountActiveTicketsByUser(ctx, serverID, i.Member.User.ID)
-					if err != nil {
+				}
+				_, err := s.Channel(channelID, discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
+				var restErr *discordgo.RESTError
+				if errors.As(err, &restErr) && restErr.Message != nil && restErr.Message.Code == discordgo.ErrCodeUnknownChannel {
+					if err := queries.DeleteActiveTicketByChannel(ctx, serverID, channelID); err != nil {
 						return err
 					}
 				}
 			}
+			count, err = queries.CountActiveTicketsByUser(ctx, serverID, i.Member.User.ID)
+			if err != nil {
+				return err
+			}
+
 			if count >= int64(serverConfig.MaxTicketPerUser) {
 				return errMaxTickets
 			}
@@ -242,22 +236,52 @@ func openTicket(s *discordgo.Session, i *discordgo.InteractionCreate, panelID in
 		return err
 	}
 
+	// Recheck live policy after preparation; never hold a DB connection while waiting on Discord.
+	panelPolicyMu.RLock()
+	err = validateJobWindow(ctx, j)
+	panelPolicyMu.RUnlock()
+	if err != nil {
+		return err
+	}
+	requestCtx, requestCancel := context.WithCancel(ctx)
+	defer requestCancel()
+	var startErr error
+	beforeSend := func(cfg *discordgo.RequestConfig) {
+		panelPolicyMu.RLock()
+		defer panelPolicyMu.RUnlock()
+		if ctx.Err() != nil {
+			startErr = ctx.Err()
+			requestCancel()
+			return
+		}
+		startErr = j.queue.markStarted(j)
+		if startErr != nil {
+			requestCancel()
+		}
+	}
 	channel, err := s.GuildChannelCreateComplex(i.GuildID, discordgo.GuildChannelCreateData{
 		Name:                 channelName,
 		Type:                 discordgo.ChannelTypeGuildText,
 		ParentID:             parentID,
 		Topic:                channelTopic,
 		PermissionOverwrites: overwrites,
-	})
+	}, discordgo.WithContext(requestCtx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false), beforeSend)
+	if startErr != nil {
+		return startErr
+	}
 	if err != nil {
 		return err
 	}
 
 	if err := queries.CreateActiveTicket(ctx, serverID, i.Member.User.ID, channel.ID, time.Now().Unix()); err != nil {
-		log.Printf("create active ticket failed: %v", err)
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+		_, cleanupErr := s.ChannelDelete(channel.ID, discordgo.WithContext(cleanupCtx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
+		log.Printf("ticket_queue persistence_failed channel=%s user=%s cleanup_failed=%t", channel.ID, i.Member.User.ID, cleanupErr != nil)
+		return err
 	}
 
-	SendWelcomeMessage(s, channel.ID, i.Member.User, panel.MentionRolesOnOpen, welcomeMsg, hasWelcome, qna)
+	SendWelcomeMessage(ctx, s, channel.ID, i.Member.User, panel.MentionRolesOnOpen, welcomeMsg, hasWelcome, qna)
 	editEphemeral(s, i, fmt.Sprintf("Ticket created! Please check <#%s>", channel.ID))
 	return nil
 }
@@ -294,7 +318,10 @@ func buildPermissionOverwrites(ctx context.Context, s *discordgo.Session, i *dis
 	}
 
 	if queries != nil {
-		members, _ := queries.GetAuthorizedMembers(ctx, serverID)
+		members, err := queries.GetAuthorizedMembers(ctx, serverID)
+		if err != nil {
+			return nil, err
+		}
 		for _, mid := range members {
 			if mid == "" {
 				continue
@@ -310,7 +337,10 @@ func buildPermissionOverwrites(ctx context.Context, s *discordgo.Session, i *dis
 			added[mid] = struct{}{}
 		}
 
-		roles, _ := queries.GetAuthorizedRoles(ctx, serverID)
+		roles, err := queries.GetAuthorizedRoles(ctx, serverID)
+		if err != nil {
+			return nil, err
+		}
 		for _, rid := range roles {
 			if rid == "" {
 				continue

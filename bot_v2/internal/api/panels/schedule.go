@@ -1,4 +1,4 @@
-﻿package panels
+package panels
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Sush1sui/FNS_BOT/internal/bot/tickets"
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/Sush1sui/FNS_BOT/internal/utils"
 	"github.com/jackc/pgx/v5"
@@ -277,6 +278,7 @@ func (h *Handler) HandleCreateScheduleWindow(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ids"})
 		return
 	}
+
 	if ok, err := h.panelExists(r, serverID, panelID); err != nil {
 		log.Printf("load panel failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to load panel"})
@@ -295,6 +297,7 @@ func (h *Handler) HandleCreateScheduleWindow(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
 	existing, err := h.DB.ListScheduleWindowsByPanel(r.Context(), panelID)
 	if err != nil {
 		log.Printf("list schedule windows failed: %v", err)
@@ -331,6 +334,7 @@ func (h *Handler) HandleUpdateScheduleWindow(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ids"})
 		return
 	}
+
 	if _, ok := h.fetchOwnedWindow(w, r, serverID, panelID, windowID); !ok {
 		return
 	}
@@ -344,6 +348,7 @@ func (h *Handler) HandleUpdateScheduleWindow(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
 	existing, err := h.DB.ListScheduleWindowsByPanel(r.Context(), panelID)
 	if err != nil {
 		log.Printf("list schedule windows failed: %v", err)
@@ -380,6 +385,8 @@ func (h *Handler) HandleDeleteScheduleWindow(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ids"})
 		return
 	}
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
+
 	if _, ok := h.fetchOwnedWindow(w, r, serverID, panelID, windowID); !ok {
 		return
 	}
@@ -397,6 +404,8 @@ func (h *Handler) setScheduleWindowClosedEarly(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ids"})
 		return
 	}
+	defer tickets.BeginPanelUpdate(serverID, panelID)()
+
 	if _, ok := h.fetchOwnedWindow(w, r, serverID, panelID, windowID); !ok {
 		return
 	}

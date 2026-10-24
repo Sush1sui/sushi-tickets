@@ -52,6 +52,7 @@ func main() {
 	mux := api.NewRouter(queries, fileClient, cfg, pool)
 
 	// 4. Start Bot
+	tickets.StartOpeningQueue()
 	bot.StartBot()
 
 	// 5. Start Server
@@ -69,6 +70,9 @@ func main() {
 	<-sigChan
 	fmt.Println("\nShutting down gracefully...")
 
+	queueShutdown, queueCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	tickets.StopOpeningQueue(queueShutdown)
+	queueCancel()
 	bot.StopBot()
 	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
