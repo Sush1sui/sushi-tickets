@@ -9,6 +9,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { ServerSummary } from "../../lib/api";
 import { ChevronRight, ServerCrash, Settings, UserPlus } from "lucide-react";
+import Image from "next/image";
 
 function ServerCard({ server }: { server: ServerSummary }) {
   const router = useRouter();
@@ -20,9 +21,11 @@ function ServerCard({ server }: { server: ServerSummary }) {
     >
       {/* Server Icon */}
       {server.iconUrl ? (
-        <img
+        <Image
           src={server.iconUrl}
           alt={server.name}
+          width={48}
+          height={48}
           className="h-12 w-12 rounded-full shrink-0 ring-2 ring-white/10 group-hover:ring-[#FF5A36]/50 transition-colors"
         />
       ) : (
@@ -66,12 +69,16 @@ export default function ServersPage() {
   if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-zinc-100 font-sans">
-        <img
-          src="/assets/sushi_logo_without_bg.png"
-          alt="Sushi Logo"
-          className="h-14 w-14 object-contain filter select-none mb-2 hover:scale-105 transition-colors duration-300"
-        />
-        <p className="text-zinc-300 text-sm font-semibold">You need to log in first.</p>
+          <Image
+            src="/assets/sushi_logo_without_bg.png"
+            alt="Sushi Logo"
+            width={56}
+            height={56}
+            className="h-14 w-14 object-contain filter select-none mb-2 hover:scale-105 transition-colors duration-300"
+          />
+        <p className="text-zinc-300 text-sm font-semibold">
+          You need to log in first.
+        </p>
         <Link
           href="/"
           className="rounded-md bg-[#FF5A36] px-5 py-2.5 text-sm font-medium text-[#1e1f22] hover:bg-[#FF6B4A] transition-colors duration-200 active:scale-95"

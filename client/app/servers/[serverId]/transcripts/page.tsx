@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { useTranscripts } from "../../../../lib/hooks/useTranscripts";
 import { ScrollText, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import InlineError from "../../../../components/InlineError";
 
 function formatTimestamp(ts: number): string {
 	if (!ts) return "—";
@@ -25,7 +26,16 @@ export default function TranscriptsPage() {
 	const [page, setPage] = useState(1);
 	const limit = 20;
 
-	const { transcripts, pagination, isLoading } = useTranscripts(serverId, page, limit);
+	const { transcripts, pagination, isLoading, isError, refresh } = useTranscripts(serverId, page, limit);
+
+	if (isError) {
+		return (
+			<InlineError
+				message="We couldn't load this server's transcripts. You may no longer have access, or it may be temporarily unavailable."
+				onRetry={refresh}
+			/>
+		);
+	}
 
 	return (
 		<div className="space-y-5 pb-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { mutate as mutateAll } from "swr";
 
 import { api, setMemoryCsrfToken } from "../../api";
 import { AuthContext } from "../../context/auth";
@@ -42,6 +43,8 @@ export default function AuthProvider({
       await api.auth.logout();
     } finally {
       setUser(null);
+      // Drop cached server data so a different account never sees the previous one's list.
+      await mutateAll(() => true, undefined, { revalidate: false });
     }
   }, []);
 

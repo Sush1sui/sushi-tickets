@@ -9,11 +9,15 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 const DiscordAPIBase = "https://discord.com/api/v10"
+
+// discordHTTPClient bounds how long a stalled Discord REST call can hold a request.
+var discordHTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 type DiscordTokenResponse struct {
 	AccessToken string `json:"access_token"`
@@ -67,7 +71,7 @@ func ExchangeDiscordToken(ctx context.Context, clientID, clientSecret, redirectU
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := discordHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +96,7 @@ func FetchDiscordUser(ctx context.Context, accessToken string) (*DiscordUser, er
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := discordHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +121,7 @@ func FetchDiscordGuilds(ctx context.Context, accessToken string) ([]DiscordGuild
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := discordHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +146,7 @@ func FetchGuildMember(ctx context.Context, botToken, guildID, userID string) (*D
 	}
 	req.Header.Set("Authorization", "Bot "+botToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := discordHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

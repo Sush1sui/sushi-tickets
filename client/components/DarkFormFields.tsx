@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useMemo } from "react";
 import { ChevronDown, X, Search, Check } from "lucide-react";
+import Image from "next/image";
 
 // ── Shared base classes ─────────────────────────────────────────────────────
 const FieldLabelContext = createContext<string | undefined>(undefined);
@@ -107,11 +108,15 @@ export function DarkSelect({
         type="button"
         aria-label={fieldLabel}
         aria-expanded={open}
-        onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
         onClick={() => setOpen((p) => !p)}
         className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-md px-4 py-2.5 text-sm text-left transition-colors duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 "
       >
-        <span className={selected ? "text-zinc-100 font-medium" : "text-zinc-400"}>
+        <span
+          className={selected ? "text-zinc-100 font-medium" : "text-zinc-400"}
+        >
           {selected?.label ?? placeholder}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -154,7 +159,10 @@ export function DarkSelect({
                 >
                   {opt.label}
                   {opt.value === value && (
-                    <Check className="h-4 w-4 text-[#FF5A36] shrink-0" strokeWidth={2.5} />
+                    <Check
+                      className="h-4 w-4 text-[#FF5A36] shrink-0"
+                      strokeWidth={2.5}
+                    />
                   )}
                 </button>
               ))}
@@ -216,7 +224,9 @@ export function DarkCombobox({
           type="text"
           aria-label={fieldLabel || placeholder}
           aria-expanded={open}
-          onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setOpen(false);
+          }}
           value={query || value}
           onChange={handleChange}
           onFocus={() => setOpen(true)}
@@ -259,7 +269,10 @@ export function DarkCombobox({
                   {opt.label}
                 </span>
                 {opt.label === value && (
-                  <Check className="h-4 w-4 text-[#FF5A36] shrink-0" strokeWidth={2.5} />
+                  <Check
+                    className="h-4 w-4 text-[#FF5A36] shrink-0"
+                    strokeWidth={2.5}
+                  />
                 )}
               </button>
             ))}
@@ -331,11 +344,19 @@ export function DarkMultiRolePicker({
           type="button"
           aria-label={fieldLabel || "Select roles"}
           aria-expanded={open}
-          onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setOpen(false);
+          }}
           onClick={() => setOpen((p) => !p)}
           className="w-full flex items-center justify-between gap-2 bg-[#1e1f22] border border-white/5 rounded-md px-4 py-2.5 text-sm text-left transition-colors duration-200 hover:border-white/10 focus:outline-none focus:border-[#FF5A36]/60 focus:ring-2 focus:ring-[#FF5A36]/15 "
         >
-          <span className={selectedIds.length > 0 ? "text-zinc-100 font-medium" : "text-zinc-400"}>
+          <span
+            className={
+              selectedIds.length > 0
+                ? "text-zinc-100 font-medium"
+                : "text-zinc-400"
+            }
+          >
             {selectedIds.length === 0
               ? "Select roles..."
               : `${selectedIds.length} role${selectedIds.length > 1 ? "s" : ""} selected`}
@@ -404,7 +425,10 @@ export function DarkMultiRolePicker({
                           @{role.name}
                         </span>
                         {checked && (
-                          <Check className="h-4 w-4 text-[#FF5A36] shrink-0" strokeWidth={2.5} />
+                          <Check
+                            className="h-4 w-4 text-[#FF5A36] shrink-0"
+                            strokeWidth={2.5}
+                          />
                         )}
                       </button>
                     );
@@ -459,7 +483,7 @@ export function DarkSearchDropdown({
   return (
     <div className={`relative ${open ? "z-30" : ""}`}>
       <div className="flex items-center gap-2 bg-[#1e1f22] border border-white/10 rounded-md px-4 py-2.5 transition-colors duration-200 focus-within:border-[#FF5A36] focus-within:ring-2 focus-within:ring-[#FF5A36]/20 hover:border-white/20 ">
-         <Search className="h-4 w-4 text-zinc-400 shrink-0" />
+        <Search className="h-4 w-4 text-zinc-400 shrink-0" />
         <input
           type="text"
           value={query}
@@ -495,10 +519,11 @@ export function DarkSearchDropdown({
                   className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors hover:bg-white/10"
                 >
                   {item.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={item.avatarUrl}
                       alt=""
+                      width={24}
+                      height={24}
                       className="h-6 w-6 shrink-0 rounded-full ring-1 ring-white/10"
                     />
                   ) : hex ? (
@@ -537,7 +562,9 @@ export function DarkChipList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="py-8 text-center text-[13px] text-zinc-400 italic">{emptyMessage}</p>
+      <p className="py-8 text-center text-[13px] text-zinc-400 italic">
+        {emptyMessage}
+      </p>
     );
   }
 
@@ -554,10 +581,11 @@ export function DarkChipList({
           >
             {/* Avatar or color swatch */}
             {item.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={item.avatarUrl}
                 alt=""
+                width={24}
+                height={24}
                 className="h-6 w-6 shrink-0 rounded-full ring-1 ring-white/10"
               />
             ) : hex ? (
@@ -597,9 +625,7 @@ export function DarkSwitchTrack({ checked }: { checked: boolean }) {
     <span
       aria-hidden="true"
       className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
-        checked
-          ? "border-[#FF5A36] bg-[#FF5A36]"
-          : "border-white/5 bg-white/10"
+        checked ? "border-[#FF5A36] bg-[#FF5A36]" : "border-white/5 bg-white/10"
       }`}
     >
       <span
@@ -674,14 +700,18 @@ export function DarkCheckbox({
         }`}
         style={{ height: "1.25rem", width: "1.25rem" }}
       >
-        {checked && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3.5} />}
+        {checked && (
+          <Check className="h-3.5 w-3.5 text-white" strokeWidth={3.5} />
+        )}
       </button>
       <div>
         <span className="text-sm text-zinc-200 group-hover:text-white font-medium transition-colors">
           {label}
         </span>
         {description && (
-          <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">{description}</p>
+          <p className="text-[13px] text-zinc-400 mt-1 leading-relaxed">
+            {description}
+          </p>
         )}
       </div>
     </label>
@@ -705,9 +735,7 @@ export function SectionCard({
       <div className="section-card-header">
         <div>
           <h2>{title}</h2>
-          {description && (
-            <p>{description}</p>
-          )}
+          {description && <p>{description}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
@@ -728,15 +756,13 @@ export function FormLabel({
 }) {
   return (
     <FieldLabelContext.Provider value={label}>
-    <div className="form-label" role="group" aria-label={label}>
-      <div className="form-label-title">
-        <span>
-          {label}
-        </span>
-        {hint && <span className="form-label-hint">{hint}</span>}
+      <div className="form-label" role="group" aria-label={label}>
+        <div className="form-label-title">
+          <span>{label}</span>
+          {hint && <span className="form-label-hint">{hint}</span>}
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
     </FieldLabelContext.Provider>
   );
 }

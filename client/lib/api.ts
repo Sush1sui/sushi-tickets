@@ -209,10 +209,6 @@ export const api = {
       fetchApi<TranscriptListResponse>(
         `/api/servers/${serverId}/transcripts?page=${page}&limit=${limit}`,
       ),
-    get: (serverId: string, transcriptId: string) =>
-      fetchApi<TranscriptDetailResponse>(
-        `/api/servers/${serverId}/transcripts/${transcriptId}`,
-      ),
   },
 
   staff: {
@@ -430,10 +426,6 @@ export type Transcript = {
 export type TranscriptListResponse = {
   transcripts: Transcript[];
   pagination: { page: number; limit: number; total: number; pages: number };
-};
-
-export type TranscriptDetailResponse = {
-  transcript: Transcript & { storageKey: string };
 };
 
 export type TranscriptMessage = {

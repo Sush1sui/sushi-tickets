@@ -6,6 +6,7 @@ import { api } from "../../../lib/api";
 import useAuth from "../../../lib/context/auth";
 import { useServerConfig } from "../../../lib/hooks/useServers";
 import { Save } from "lucide-react";
+import InlineError from "../../../components/InlineError";
 import {
   DarkInput,
   DarkToggle,
@@ -88,7 +89,7 @@ export default function ServerSettingsPage() {
   const params = useParams();
   const router = useRouter();
   const { user, authLoading } = useAuth();
-  const { config, channels, isLoading } = useServerConfig(
+  const { config, channels, isLoading, isError, refresh } = useServerConfig(
     params.serverId as string,
     true,
   );
@@ -233,6 +234,15 @@ export default function ServerSettingsPage() {
           <p className="text-[13px] text-zinc-400">Loading settings...</p>
         </div>
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <InlineError
+        message="We couldn't load this server's settings. You may no longer have access, or it may be temporarily unavailable."
+        onRetry={refresh}
+      />
     );
   }
 

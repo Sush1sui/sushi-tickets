@@ -209,17 +209,25 @@ func (s *Server) handleAuthServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	servers := make([]serverSummary, 0, len(guilds))
+	// Keep Discord's order, but only guilds the bot is actually in.
+	present := make([]discordGuild, 0, len(guilds))
 	for _, g := range guilds {
-		if _, ok := botGuilds[g.ID]; !ok {
+		if _, ok := botGuilds[g.ID]; ok {
+			present = append(present, g)
+		}
+	}
+
+	allowed, err := s.authorizedGuilds(r.Context(), present, claims)
+	if err != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "auth check failed"})
+		return
+	}
+
+	servers := make([]serverSummary, 0, len(present))
+	for _, g := range present {
+		if !allowed[g.ID] {
 			continue
 		}
-
-		allowed, err := s.isAuthorizedGuild(r.Context(), g, claims)
-		if err != nil || !allowed {
-			continue
-		}
-
 		servers = append(servers, serverSummary{
 			ID:      g.ID,
 			Name:    g.Name,
@@ -386,50 +394,109 @@ func hasAdminPermsFromCache(guildID, userID string) bool {
 	return perms&0x8 != 0 || perms&0x20 != 0
 }
 
-func (s *Server) isAuthorizedGuild(ctx context.Context, guild discordGuild, claims *AuthClaims) (bool, error) {
-	if utils.GuildIsAdmin(guild) {
-		return true, nil
+// authorizedGuilds resolves which of the given guilds the user may manage.
+// Admin permissions come from the OAuth guild payload; whitelist lookups are
+// batched into three queries per request instead of three per guild.
+func (s *Server) authorizedGuilds(ctx context.Context, guilds []discordGuild, claims *AuthClaims) (map[string]bool, error) {
+	allowed := make(map[string]bool, len(guilds))
+	needsCheck := make([]discordGuild, 0, len(guilds))
+	ids := make([]int64, 0, len(guilds))
+
+	for _, g := range guilds {
+		if utils.GuildIsAdmin(g) {
+			allowed[g.ID] = true
+			continue
+		}
+		id, err := strconv.ParseInt(g.ID, 10, 64)
+		if err != nil {
+			continue
+		}
+		needsCheck = append(needsCheck, g)
+		ids = append(ids, id)
 	}
 
-	id, err := strconv.ParseInt(guild.ID, 10, 64)
+	if len(needsCheck) == 0 {
+		return allowed, nil
+	}
+
+	existing, err := s.DB.GetExistingServerConfigIDs(ctx, ids)
 	if err != nil {
-		return false, err
+		return nil, err
+	}
+	configExists := make(map[int64]struct{}, len(existing))
+	for _, id := range existing {
+		configExists[id] = struct{}{}
 	}
 
-	_, err = s.DB.GetServerConfig(ctx, id)
+	memberServers, err := s.DB.GetServersByMember(ctx, claims.DiscordID)
 	if err != nil {
-		return false, nil
+		return nil, err
+	}
+	memberOf := make(map[int64]struct{}, len(memberServers))
+	for _, id := range memberServers {
+		memberOf[id] = struct{}{}
 	}
 
-	isMember, _ := s.DB.IsMemberAuthorized(ctx, db.IsMemberAuthorizedParams{
-		ServerConfigID: id,
-		MemberID:       claims.DiscordID,
-	})
-	if isMember {
-		return true, nil
+	roleRows, err := s.DB.GetAuthorizedRolesForServers(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	authorizedRoles := make(map[int64][]string, len(ids))
+	for _, row := range roleRows {
+		authorizedRoles[row.ServerConfigID] = append(authorizedRoles[row.ServerConfigID], row.RoleID)
 	}
 
-	roleIds, _ := s.DB.GetAuthorizedRoles(ctx, id)
+	for _, g := range needsCheck {
+		id, _ := strconv.ParseInt(g.ID, 10, 64)
+		_, hasConfig := configExists[id]
+		_, isMember := memberOf[id]
+		roleIds := authorizedRoles[id]
+		cachedMatch := len(roleIds) > 0 && userHasAuthorizedRole(g.ID, claims.DiscordID, roleIds)
+
+		allowed[g.ID] = guildAllowed(hasConfig, isMember, roleIds, cachedMatch, func() ([]string, error) {
+			member, err := utils.FetchGuildMember(ctx, s.Config.BotToken, g.ID, claims.DiscordID)
+			if err != nil {
+				return nil, err
+			}
+			return member.Roles, nil
+		})
+	}
+
+	return allowed, nil
+}
+
+// guildAllowed decides access for one non-admin guild from batched lookups.
+// memberHasRole is only called on a Discord cache miss.
+func guildAllowed(
+	hasConfig bool,
+	isMemberWhitelisted bool,
+	roleIds []string,
+	cachedRoleMatch bool,
+	memberHasRole func() ([]string, error),
+) bool {
+	if !hasConfig {
+		return false
+	}
+	if isMemberWhitelisted {
+		return true
+	}
 	if len(roleIds) == 0 {
-		return false, nil
+		return false
+	}
+	if cachedRoleMatch {
+		return true
 	}
 
-	// Try in-memory Discord cache first (0 network calls!)
-	if userHasAuthorizedRole(guild.ID, claims.DiscordID, roleIds) {
-		return true, nil
-	}
-
-	// Fallback to Discord API call only on cache miss
-	member, err := utils.FetchGuildMember(ctx, s.Config.BotToken, guild.ID, claims.DiscordID)
+	roles, err := memberHasRole()
 	if err != nil {
-		return false, err
+		return false
 	}
-	for _, roleID := range member.Roles {
+	for _, roleID := range roles {
 		if utils.ContainsString(roleIds, roleID) {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // HasGuildPerms checks if user has admin/manage guild permissions on a guild

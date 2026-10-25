@@ -8,6 +8,7 @@ import { api } from "../../../../lib/api";
 import { useMultiPanels, usePanels } from "../../../../lib/hooks/usePanels";
 import { Plus, Send, Pencil, Trash2 } from "lucide-react";
 import DarkConfirmModal from "../../../../components/DarkConfirmModal";
+import InlineError from "../../../../components/InlineError";
 
 function PanelRow({
 	title,
@@ -61,10 +62,11 @@ function PanelRow({
 export default function PanelsPage() {
 	const params = useParams();
 	const serverId = params.serverId as string;
-	const { panels, isLoading: panelsLoading, refresh } = usePanels(serverId);
+	const { panels, isLoading: panelsLoading, isError: panelsError, refresh } = usePanels(serverId);
 	const {
 		multiPanels,
 		isLoading: multiPanelsLoading,
+		isError: multiPanelsError,
 		refresh: refreshMultiPanels,
 	} = useMultiPanels(serverId);
 	const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -174,9 +176,20 @@ export default function PanelsPage() {
 	const isSingle = panelType === "single";
 	const items = isSingle ? panels : multiPanels;
 	const listLoading = isSingle ? panelsLoading : multiPanelsLoading;
+	const listError = isSingle ? panelsError : multiPanelsError;
+	const listRefresh = isSingle ? refresh : refreshMultiPanels;
 	const createHref = isSingle
 		? `/servers/${serverId}/panels/create`
 		: `/servers/${serverId}/multi-panels/create`;
+
+	if (listError) {
+		return (
+			<InlineError
+				message="We couldn't load this server's panels. You may no longer have access, or it may be temporarily unavailable."
+				onRetry={listRefresh}
+			/>
+		);
+	}
 
 	const tabClass = (active: boolean) =>
 		`-mb-px border-b-2 pt-1 pb-3 text-sm font-medium transition-colors ${

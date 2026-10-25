@@ -2,7 +2,6 @@ import useSWR from "swr";
 import {
   API_BASE,
   type TranscriptListResponse,
-  type TranscriptDetailResponse,
   type TranscriptContent,
 } from "../api";
 
@@ -33,26 +32,6 @@ export function useTranscripts(serverId: string, page: number, limit = 20) {
   return {
     transcripts: data?.transcripts ?? [],
     pagination: data?.pagination ?? { page: 1, limit: 20, total: 0, pages: 0 },
-    isLoading,
-    isError: !!error,
-    refresh: mutate,
-  };
-}
-
-export function useTranscript(serverId: string, transcriptId: string) {
-  const { data, error, isLoading, mutate } = useSWR(
-    serverId && transcriptId
-      ? `/api/servers/${serverId}/transcripts/${transcriptId}`
-      : null,
-    fetcher<TranscriptDetailResponse>,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    },
-  );
-
-  return {
-    transcript: data?.transcript ?? null,
     isLoading,
     isError: !!error,
     refresh: mutate,

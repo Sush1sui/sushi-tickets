@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   const supportUrl =
@@ -12,7 +13,7 @@ export default function Footer() {
     <footer className="site-footer">
       <div className="site-footer-identity">
         <Link href="/" className="site-footer-brand">
-          <img
+          <Image
             src="/assets/sushi_logo_without_bg.png"
             alt=""
             width={24}
@@ -20,7 +21,9 @@ export default function Footer() {
           />
           <span>Sushi Tickets</span>
         </Link>
-        <p className="site-footer-copyright">© {new Date().getFullYear()} Sushi Tickets</p>
+        <p className="site-footer-copyright">
+          © {new Date().getFullYear()} Sushi Tickets
+        </p>
       </div>
 
       <nav aria-label="Footer" className="site-footer-nav">
@@ -34,8 +37,12 @@ export default function Footer() {
           Support Server
         </a>
 
-        <Link href="/terms" className="site-footer-link">Terms of Service</Link>
-        <Link href="/privacy" className="site-footer-link">Privacy Policy</Link>
+        <Link href="/terms" className="site-footer-link">
+          Terms of Service
+        </Link>
+        <Link href="/privacy" className="site-footer-link">
+          Privacy Policy
+        </Link>
       </nav>
     </footer>
   );

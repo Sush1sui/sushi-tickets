@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronLeft, ScrollText, Calendar, ShieldAlert, MessagesSquare, Paperclip, AppWindow } from "lucide-react";
-
 import {
-  useTranscript,
-  useTranscriptContent,
-} from "../../../../../lib/hooks/useTranscripts";
+  ChevronLeft,
+  ScrollText,
+  Calendar,
+  ShieldAlert,
+  MessagesSquare,
+  Paperclip,
+  AppWindow,
+} from "lucide-react";
+
+import { useTranscriptContent } from "../../../../../lib/hooks/useTranscripts";
 import type { TranscriptMessage } from "../../../../../lib/api";
+import Image from "next/image";
 
 function formatTimestamp(ts: string | number): string {
   if (!ts) return "—";
@@ -82,6 +88,7 @@ function MessageContent({ message }: { message: TranscriptMessage }) {
               {embed.author && (
                 <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium text-zinc-300">
                   {embed.author.iconUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={embed.author.iconUrl}
                       alt=""
@@ -133,7 +140,10 @@ function MessageContent({ message }: { message: TranscriptMessage }) {
                   }}
                 >
                   {embed.fields.map((field, fIdx) => (
-                    <div key={fIdx} className="bg-zinc-950/20 p-2.5 rounded-md border border-white/2">
+                    <div
+                      key={fIdx}
+                      className="bg-zinc-950/20 p-2.5 rounded-md border border-white/2"
+                    >
                       <div className="text-[13px] font-medium text-zinc-300">
                         {field.name}
                       </div>
@@ -145,6 +155,7 @@ function MessageContent({ message }: { message: TranscriptMessage }) {
                 </div>
               )}
               {embed.image && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={embed.image.url}
                   alt=""
@@ -154,6 +165,7 @@ function MessageContent({ message }: { message: TranscriptMessage }) {
               {embed.footer && (
                 <div className="mt-3 flex items-center gap-1.5 text-[13px] text-zinc-400 font-semibold border-t border-white/2 pt-2">
                   {embed.footer.iconUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={embed.footer.iconUrl}
                       alt=""
@@ -173,6 +185,7 @@ function MessageContent({ message }: { message: TranscriptMessage }) {
           {message.attachments.map((att) => (
             <div key={att.id}>
               {att.contentType?.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={att.url}
                   alt={att.filename}
@@ -217,18 +230,12 @@ export default function TranscriptViewerPage() {
   const transcriptId = params.transcriptId as string;
 
   const {
-    transcript,
-    isLoading: metaLoading,
-    isError: metaError,
-  } = useTranscript(serverId, transcriptId);
-
-  const {
     content,
     isLoading: contentLoading,
     isError: contentError,
   } = useTranscriptContent(serverId, transcriptId);
 
-  if (metaLoading) {
+  if (contentLoading) {
     return (
       <div className="space-y-6">
         <div className="transcript-heading">
@@ -239,19 +246,23 @@ export default function TranscriptViewerPage() {
             <ChevronLeft className="h-4 w-4" />
             Back
           </Link>
-          <h1 className="text-base font-medium text-white tracking-tight">Transcript</h1>
+          <h1 className="text-base font-medium text-white tracking-tight">
+            Transcript
+          </h1>
         </div>
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
             <div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-            <p className="text-[13px] text-zinc-400 font-semibold ">Loading transcript...</p>
+            <p className="text-[13px] text-zinc-400 font-semibold ">
+              Loading transcript...
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (metaError || !transcript) {
+  if (contentError || !content) {
     return (
       <div className="space-y-6">
         <div className="transcript-heading">
@@ -262,7 +273,9 @@ export default function TranscriptViewerPage() {
             <ChevronLeft className="h-4 w-4" />
             Back
           </Link>
-          <h1 className="text-base font-medium text-white tracking-tight">Transcript</h1>
+          <h1 className="text-base font-medium text-white tracking-tight">
+            Transcript
+          </h1>
         </div>
         <div className="rounded-lg border border-red-500/20 bg-red-950/20 p-6 text-center ">
           <p className="text-sm text-red-400 font-medium">
@@ -273,7 +286,8 @@ export default function TranscriptViewerPage() {
     );
   }
 
-  const ticketLabel = transcript.ticketId || `#${transcript.id}`;
+  const ticketLabel = content.ticketId || "Transcript";
+  const meta = content.metadata;
 
   return (
     <div className="space-y-6">
@@ -301,7 +315,7 @@ export default function TranscriptViewerPage() {
               <Calendar className="h-3 w-3" /> Opened
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px] break-words">
-              {formatTimestamp(transcript.openedAt)}
+              {formatTimestamp(meta.ticketOpenedAt)}
             </div>
           </div>
           <div className="bg-zinc-950/20 p-3 rounded-md border border-white/2 ">
@@ -309,7 +323,7 @@ export default function TranscriptViewerPage() {
               <Calendar className="h-3 w-3" /> Closed
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px] break-words">
-              {formatTimestamp(transcript.closedAt)}
+              {formatTimestamp(meta.ticketClosedAt)}
             </div>
           </div>
           <div className="bg-zinc-950/20 p-3 rounded-md border border-white/2 ">
@@ -317,7 +331,7 @@ export default function TranscriptViewerPage() {
               <ShieldAlert className="h-3 w-3" /> Closed By
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px] break-words">
-              {transcript.closedBy}
+              {meta.closedBy?.username || meta.closedBy?.id || "—"}
             </div>
           </div>
           <div className="bg-zinc-950/20 p-3 rounded-md border border-white/2 ">
@@ -325,7 +339,7 @@ export default function TranscriptViewerPage() {
               <MessagesSquare className="h-3 w-3" /> Messages
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px]">
-              {transcript.totalMessages}
+              {meta.totalMessages}
             </div>
           </div>
           <div className="bg-zinc-950/20 p-3 rounded-md border border-white/2 ">
@@ -333,7 +347,7 @@ export default function TranscriptViewerPage() {
               <Paperclip className="h-3 w-3" /> Attachments
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px]">
-              {transcript.totalAttachments}
+              {meta.totalAttachments}
             </div>
           </div>
           <div className="bg-zinc-950/20 p-3 rounded-md border border-white/2 ">
@@ -341,7 +355,7 @@ export default function TranscriptViewerPage() {
               <AppWindow className="h-3 w-3" /> Embeds
             </div>
             <div className="font-medium text-zinc-100 mt-1.5 text-[13px]">
-              {transcript.totalEmbeds}
+              {meta.totalEmbeds}
             </div>
           </div>
         </div>
@@ -353,34 +367,22 @@ export default function TranscriptViewerPage() {
           Conversation Log
         </h2>
 
-        {contentLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-6 w-6 rounded-full border-2 border-zinc-700 border-t-[#FF5A36] animate-spin" />
-              <p className="text-[13px] text-zinc-400 font-semibold ">Loading messages...</p>
-            </div>
-          </div>
-        )}
-
-        {contentError && (
-          <div className="rounded-lg border border-red-500/20 bg-red-950/20 p-6 text-center ">
-            <p className="text-sm text-red-400 font-medium leading-relaxed">
-              Failed to load message content. The stored transcript may be
-              unavailable.
-            </p>
-          </div>
-        )}
-
-        {content && (
+        {content.messages.length === 0 ? (
+          <p className="text-sm text-zinc-400 font-medium py-6 text-center">
+            This transcript has no messages.
+          </p>
+        ) : (
           <div className="space-y-4">
             {content.messages.map((msg, idx) => (
               <div
                 key={`${msg.id}-${idx}`}
                 className="flex gap-4 rounded-lg border border-white/5 bg-zinc-950/20 px-4 py-4 transition-colors duration-200 hover:bg-zinc-950/40 hover:border-white/10"
               >
-                <img
+                <Image
                   src={getAvatarUrl(msg.author)}
                   alt={msg.author.username}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 shrink-0 rounded-full border border-white/10 ring-2 ring-white/5 "
                 />
                 <div className="min-w-0 flex-1">

@@ -6,6 +6,7 @@ import { api, type StaffMember, type StaffRole } from "../../../../lib/api";
 import useAuth from "../../../../lib/context/auth";
 import { useStaff } from "../../../../lib/hooks/useStaff";
 import { Save, Users, Shield } from "lucide-react";
+import InlineError from "../../../../components/InlineError";
 import {
 	DarkSearchDropdown,
 	DarkChipList,
@@ -25,6 +26,7 @@ export default function StaffPage() {
 		authorizedMemberIds,
 		authorizedRoleIds,
 		isLoading,
+		isError,
 		refresh,
 	} = useStaff(serverId);
 
@@ -139,6 +141,15 @@ export default function StaffPage() {
 					<p className="text-[13px] text-zinc-400">Loading staff...</p>
 				</div>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<InlineError
+				message="We couldn't load this server's staff settings. You may no longer have access, or it may be temporarily unavailable."
+				onRetry={refresh}
+			/>
 		);
 	}
 
