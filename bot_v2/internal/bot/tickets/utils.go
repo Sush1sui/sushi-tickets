@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Sush1sui/FNS_BOT/internal/config"
+	"github.com/Sush1sui/FNS_BOT/internal/utils"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -215,7 +216,7 @@ func canCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
 		}
 	}
 
-	return false
+	return utils.HasAdminPerms(i.Member.Permissions)
 }
 
 func showQuestionsModal(s *discordgo.Session, i *discordgo.InteractionCreate, panelID int32, modalTitle string, questions []QuestionData, version string, options ...discordgo.RequestOption) {
