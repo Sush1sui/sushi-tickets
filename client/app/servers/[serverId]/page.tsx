@@ -288,10 +288,11 @@ export default function ServerSettingsPage() {
             title="Ticket Name Style"
             description="How ticket channels are named when opened in Discord."
           >
-            <div className="flex gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               {[
                 { value: "number", label: "By Number", example: "ticket-1" },
                 { value: "name", label: "By Username", example: "ticket-sush1sui" },
+                { value: "name_number", label: "Username + Number", example: "ticket-sush1sui-1234" },
               ].map(({ value, label, example }) => (
                 <button
                   key={value}

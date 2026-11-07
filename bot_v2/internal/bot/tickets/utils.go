@@ -384,7 +384,11 @@ func buildTicketChannelName(style, username, interactionID string) string {
 		if len(suffix) > 4 {
 			suffix = suffix[len(suffix)-4:]
 		}
-		name = fmt.Sprintf("ticket-%s", suffix)
+		if style == "name_number" && username != "" {
+			name = fmt.Sprintf("ticket-%s-%s", username, suffix)
+		} else {
+			name = fmt.Sprintf("ticket-%s", suffix)
+		}
 	}
 
 	name = strings.ToLower(name)
