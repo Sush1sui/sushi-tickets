@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   ChevronLeft,
-  ScrollText,
   Calendar,
   ShieldAlert,
   MessagesSquare,
@@ -304,6 +303,22 @@ export default function TranscriptViewerPage() {
         </h1>
       </div>
 
+      {/* History disclosure: never imply a partial capture is complete. */}
+      {meta.historyComplete === false && (
+        <section className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-5">
+          <h2 className="text-[13px] font-medium text-amber-300">
+            Partial transcript history
+          </h2>
+          <p className="mt-2 text-[13px] text-amber-100/90 font-medium leading-relaxed">
+            {meta.historyNote ||
+              "Recording started after this ticket opened or was interrupted. Messages before recording started, or sent while the bot was offline, were never observed and cannot be recovered."}
+          </p>
+          <p className="mt-2 text-[13px] text-amber-100/70 font-medium">
+            Recording started: {formatTimestamp(meta.captureStart || "")}
+          </p>
+        </section>
+      )}
+
       {/* Metadata */}
       <section className="rounded-lg border border-white/5 bg-zinc-900/10 p-5 ">
         <h2 className="mb-4 text-[13px] font-medium text-[#FF5A36] ">
@@ -369,7 +384,9 @@ export default function TranscriptViewerPage() {
 
         {content.messages.length === 0 ? (
           <p className="text-sm text-zinc-400 font-medium py-6 text-center">
-            This transcript has no messages.
+            {meta.historyComplete === false
+              ? "No messages were observed after recording began."
+              : "This transcript has no messages."}
           </p>
         ) : (
           <div className="space-y-4">

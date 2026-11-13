@@ -2,7 +2,6 @@ package tickets
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"reflect"
 	"testing"
@@ -51,43 +50,29 @@ func TestChannelDeleteRemovesOnlyMatchingGuildChannel(t *testing.T) {
 	}
 }
 
-func TestGuildReconciliationOnlyPurgesConfirmedUnknownChannels(t *testing.T) {
+func TestGuildReconciliationUsesCacheOnly(t *testing.T) {
 	d := &cleanupDB{surgeDB: surgeDB{activeChannels: []string{"live", "deleted", "forbidden", "unavailable", "network", "other404"}}}
 	installCleanupDB(t, d)
 	s, _ := discordgo.New("Bot test")
-	// A stale cached channel must not hide an offline deletion.
 	s.State.GuildAdd(&discordgo.Guild{ID: "42"})
-	s.State.ChannelAdd(&discordgo.Channel{ID: "deleted", GuildID: "42"})
+	s.State.ChannelAdd(&discordgo.Channel{ID: "live", GuildID: "42"})
 	var requests int
 	s.Client = &http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
 		requests++
-		if r.Method != http.MethodGet {
-			t.Fatalf("cleanup tried to mutate Discord: %s", r.Method)
-		}
-		switch r.URL.Path {
-		case "/api/v9/channels/deleted":
-			return response(404, `{"code":10003,"message":"Unknown Channel"}`), nil
-		case "/api/v9/channels/forbidden":
-			return response(403, `{"code":50001,"message":"Missing Access"}`), nil
-		case "/api/v9/channels/unavailable":
-			return response(503, `{}`), nil
-		case "/api/v9/channels/network":
-			return nil, errors.New("network down")
-		case "/api/v9/channels/other404":
-			return response(404, `{"code":0}`), nil
-		default:
-			return response(200, `{"id":"live","guild_id":"42"}`), nil
-		}
+		return response(200, `{}`), nil
 	})}
 	HandleGuildCreate(s, &discordgo.GuildCreate{Guild: &discordgo.Guild{ID: "42", Unavailable: true}})
 	if d.selected != nil {
 		t.Fatal("queried an unavailable guild")
 	}
 	HandleGuildCreate(s, &discordgo.GuildCreate{Guild: &discordgo.Guild{ID: "42"}})
-	if requests != len(d.activeChannels) || !reflect.DeepEqual(d.selected, []any{int64(42)}) {
-		t.Fatalf("incomplete or incorrectly scoped reconciliation: requests=%d args=%v", requests, d.selected)
+	if requests != 0 {
+		t.Fatalf("cache-only reconciliation issued %d Discord requests", requests)
 	}
-	if !reflect.DeepEqual(d.deleted, [][]any{{int64(42), "deleted"}}) {
-		t.Fatalf("deleted unconfirmed channel rows: %v", d.deleted)
+	if !reflect.DeepEqual(d.selected, []any{int64(42)}) {
+		t.Fatalf("incorrect reconciliation scope: args=%v", d.selected)
+	}
+	if len(d.deleted) != 0 {
+		t.Fatalf("deleted rows on cache miss without proof: %v", d.deleted)
 	}
 }

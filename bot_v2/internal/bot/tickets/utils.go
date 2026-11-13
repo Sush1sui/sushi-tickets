@@ -146,35 +146,6 @@ func intPtr(value int) *int {
 	return &value
 }
 
-func fetchAllMessages(s *discordgo.Session, channelID string) ([]*discordgo.Message, error) {
-	if s == nil {
-		return nil, fmt.Errorf("missing session")
-	}
-
-	all := make([]*discordgo.Message, 0)
-	before := ""
-	for {
-		msgs, err := s.ChannelMessages(channelID, 100, before, "", "")
-		if err != nil {
-			return nil, err
-		}
-		if len(msgs) == 0 {
-			break
-		}
-		all = append(all, msgs...)
-		before = msgs[len(msgs)-1].ID
-		if len(msgs) < 100 {
-			break
-		}
-	}
-
-	for i, j := 0, len(all)-1; i < j; i, j = i+1, j-1 {
-		all[i], all[j] = all[j], all[i]
-	}
-
-	return all, nil
-}
-
 func canCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
 	if i == nil || i.Member == nil || i.Member.User == nil {
 		return false
@@ -365,11 +336,8 @@ func getChannelFromInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		}
 	}
 
-	ch, err := s.Channel(i.ChannelID)
-	if err != nil {
-		return nil
-	}
-	return ch
+	// Cache misses are unknown. Never issue a Discord REST read as a fallback.
+	return nil
 }
 
 func staffPerms() int64 {

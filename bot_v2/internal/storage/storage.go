@@ -32,6 +32,20 @@ func NewFileClient() *Client {
 	return &Client{dir: dir}
 }
 
+// NewClientAt returns a client rooted at dir. Used by tests and tooling.
+func NewClientAt(dir string) *Client {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		log.Fatalf("Failed to create transcript dir %s: %v", dir, err)
+	}
+	return &Client{dir: dir}
+}
+
+// BaseDir exposes the storage root for adjacent local state such as the
+// gateway message spool.
+func (c *Client) BaseDir() string {
+	return c.dir
+}
+
 // keyPath maps a storage key to a file under the base dir.
 // Clean resolves ".." lexically and Join keeps cleaned absolute paths
 // under dir, so a key can never escape the base directory.
@@ -53,7 +67,20 @@ func (c *Client) UploadTranscript(_ context.Context, key string, data []byte) er
 		return err
 	}
 	tmp := p + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	// A transcript must be durable before the bot deletes its Discord channel.
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
 		return err
 	}
 	return os.Rename(tmp, p)

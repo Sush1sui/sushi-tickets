@@ -710,13 +710,9 @@ func TestCreationFailureHandlingAndTicketLimit(t *testing.T) {
 				if err == nil || creates.Load() != 1 || deletes.Load() != 0 {
 					t.Fatal("creation retried or missing error")
 				}
-			case "ticket limit", "cache miss exists":
+			case "ticket limit", "cache miss exists", "unknown channel":
 				if !errors.Is(err, errMaxTickets) || creates.Load() != 0 || d.deletes != 0 {
-					t.Fatal("limit/cache miss bypassed tracking")
-				}
-			case "unknown channel":
-				if err != nil || creates.Load() != 1 || d.deletes != 1 {
-					t.Fatalf("confirmed stale record not pruned: %v", err)
+					t.Fatal("limit/cache miss bypassed tracking or issued a REST read")
 				}
 			}
 		})

@@ -489,6 +489,10 @@ export type TranscriptContent = {
     totalAttachments: number;
     totalEmbeds: number;
     participants: { id: string; username: string; messageCount: number }[];
+    historyComplete?: boolean;
+    captureStart?: string;
+    gapDetected?: boolean;
+    historyNote?: string;
   };
 };
 

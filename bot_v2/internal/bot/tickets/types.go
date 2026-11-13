@@ -136,4 +136,8 @@ type transcriptMetadata struct {
 	TotalAttachments int                     `json:"totalAttachments"`
 	TotalEmbeds      int                     `json:"totalEmbeds"`
 	Participants     []transcriptParticipant `json:"participants"`
+	HistoryComplete  bool                    `json:"historyComplete"`
+	CaptureStart     string                  `json:"captureStart,omitempty"`
+	GapDetected      bool                    `json:"gapDetected"`
+	HistoryNote      string                  `json:"historyNote,omitempty"`
 }

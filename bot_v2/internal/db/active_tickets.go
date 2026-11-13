@@ -2,6 +2,83 @@ package db
 
 import "context"
 
+// ActiveTicketRow is the tracking metadata needed to restore auto-close and
+// transcript capture after a restart.
+type ActiveTicketRow struct {
+	UserID    string
+	ChannelID string
+	CreatedAt int64
+}
+
+const listActiveTicketsByServer = `
+SELECT user_id, channel_id, created_at
+FROM active_ticket
+WHERE server_config_id = $1
+`
+
+func (q *Queries) ListActiveTicketsByServer(ctx context.Context, serverConfigID int64) ([]ActiveTicketRow, error) {
+	rows, err := q.db.Query(ctx, listActiveTicketsByServer, serverConfigID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]ActiveTicketRow, 0)
+	for rows.Next() {
+		var row ActiveTicketRow
+		if err := rows.Scan(&row.UserID, &row.ChannelID, &row.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, row)
+	}
+	return items, rows.Err()
+}
+
+const listAutoCloseServers = `
+SELECT server_config_id FROM auto_close_config WHERE is_active = true
+`
+
+func (q *Queries) ListAutoCloseServers(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAutoCloseServers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+const listTranscriptEnabledServers = `
+SELECT id FROM server_config
+WHERE ticket_transcript_cid IS NOT NULL AND ticket_transcript_cid <> ''
+`
+
+func (q *Queries) ListTranscriptEnabledServers(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listTranscriptEnabledServers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 const countActiveTicketsByUser = `
 SELECT COUNT(*)
 FROM active_ticket

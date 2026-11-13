@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/Sush1sui/FNS_BOT/internal/bot"
+	"github.com/Sush1sui/FNS_BOT/internal/bot/tickets"
 	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/Sush1sui/FNS_BOT/internal/utils"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -184,6 +185,8 @@ func (h *Handler) HandleUpdateServerConfig(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to save auto close config"})
 		return
 	}
+
+	tickets.RefreshGuildConfig(serverID)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "saved"})
 }

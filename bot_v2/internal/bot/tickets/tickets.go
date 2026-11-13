@@ -2,17 +2,13 @@ package tickets
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Sush1sui/FNS_BOT/internal/db"
 	"github.com/bwmarrin/discordgo"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func HandleComponentInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -196,16 +192,11 @@ func openTicket(ctx context.Context, j *ticketJob) error {
 				return err
 			}
 			for _, channelID := range channels {
+				// Cache misses are unknown, not proof of deletion. Never fall back
+				// to a Discord REST read; stale rows are cleared by gateway events.
 				if s.State != nil {
 					if _, err := s.State.Channel(channelID); err == nil {
 						continue
-					}
-				}
-				_, err := s.Channel(channelID, discordgo.WithContext(ctx), discordgo.WithRestRetries(0), discordgo.WithRetryOnRatelimit(false))
-				var restErr *discordgo.RESTError
-				if errors.As(err, &restErr) && restErr.Message != nil && restErr.Message.Code == discordgo.ErrCodeUnknownChannel {
-					if err := queries.DeleteActiveTicketByChannel(ctx, serverID, channelID); err != nil {
-						return err
 					}
 				}
 			}
@@ -280,6 +271,7 @@ func openTicket(ctx context.Context, j *ticketJob) error {
 		log.Printf("ticket_queue persistence_failed channel=%s user=%s cleanup_failed=%t", channel.ID, i.Member.User.ID, cleanupErr != nil)
 		return err
 	}
+	TrackNewTicket(serverID, i.Member.User.ID, channel.ID, time.Now(), serverConfig.TicketTranscriptCid.Valid && serverConfig.TicketTranscriptCid.String != "")
 
 	SendWelcomeMessage(ctx, s, channel.ID, i.Member.User, panel.MentionRolesOnOpen, welcomeMsg, hasWelcome, qna)
 	editEphemeral(s, i, fmt.Sprintf("Ticket created! Please check <#%s>", channel.ID))
@@ -378,148 +370,82 @@ func buildPermissionOverwrites(ctx context.Context, s *discordgo.Session, i *dis
 func handleCloseTicket(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	respondDeferred(s, i)
 
-	channelID := i.ChannelID
-	if channelID == "" {
+	if i.ChannelID == "" {
 		editEphemeral(s, i, "Channel not found.")
 		return
 	}
-
 	if !canCloseTicket(s, i) {
 		editEphemeral(s, i, "Not allowed to close this ticket.")
 		return
 	}
-
-	saveTranscriptOnClose(s, i)
-
-	if queries != nil {
-		serverID, err := strconv.ParseInt(i.GuildID, 10, 64)
-		if err == nil {
-			if err := queries.DeleteActiveTicketByChannel(context.Background(), serverID, channelID); err != nil {
-				log.Printf("delete active ticket failed: %v", err)
-			}
-		}
-	}
-
-	if _, err := s.ChannelDelete(channelID); err != nil {
-		editEphemeral(s, i, "Failed to close ticket.")
-		return
+	if message := CloseTicketManually(s, i); message != "" {
+		editEphemeral(s, i, message)
 	}
 }
 
-func saveTranscriptOnClose(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if queries == nil || storageClient == nil {
-		return
-	}
-	if i == nil || i.GuildID == "" || i.ChannelID == "" {
-		return
-	}
-
+// CloseTicketManually keeps the existing authorization boundary and persists
+// the configured transcript before deleting the channel. Capture stays active
+// until the channel is gone.
+func CloseTicketManually(s *discordgo.Session, i *discordgo.InteractionCreate) string {
 	serverID, err := strconv.ParseInt(i.GuildID, 10, 64)
 	if err != nil {
-		return
+		return "Failed to close ticket."
 	}
-
-	serverConfig, err := queries.GetServerConfig(context.Background(), serverID)
-	if err != nil || !serverConfig.TicketTranscriptCid.Valid || serverConfig.TicketTranscriptCid.String == "" {
-		return
+	channelID := i.ChannelID
+	tracker := getTracker(channelID)
+	if tracker == nil {
+		createdAt := nowFn()
+		openerID := ""
+		if queries != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			info, infoErr := queries.GetActiveTicketByChannel(ctx, serverID, channelID)
+			cancel()
+			if infoErr == nil {
+				createdAt = time.Unix(info.CreatedAt, 0)
+				openerID = info.UserID
+			}
+		}
+		if openerID == "" && i.Member != nil && i.Member.User != nil {
+			openerID = i.Member.User.ID
+		}
+		tracker = &ticketTracker{
+			guildID: serverID, openerID: openerID, channelID: channelID,
+			createdAt: createdAt, observedSince: nowFn(), uncertain: true,
+			capture: loadCapture(serverID),
+		}
+		autoClose.Lock()
+		autoClose.trackers[channelID] = tracker
+		autoClose.Unlock()
 	}
-
-	messages, err := fetchAllMessages(s, i.ChannelID)
-	if err != nil {
-		log.Printf("fetch transcript messages failed: %v", err)
-		return
-	}
-
-	openedAt := int64(0)
-	userID := ""
-	username := ""
-	if info, err := queries.GetActiveTicketByChannel(context.Background(), serverID, i.ChannelID); err == nil {
-		openedAt = info.CreatedAt
-		userID = info.UserID
-	}
-	if openedAt == 0 {
-		openedAt = time.Now().Unix()
-	}
-	if userID == "" && i.Member != nil && i.Member.User != nil {
-		userID = i.Member.User.ID
-		username = i.Member.User.Username
-	}
-	if username == "" && userID != "" && s != nil && s.State != nil {
-		if m, err := s.State.Member(i.GuildID, userID); err == nil && m.User != nil {
-			username = m.User.Username
+	if tracker.capture && !spoolExists(serverID, channelID) {
+		if err := spoolStart(serverID, channelID, tracker.openerID, tracker.createdAt.Unix(), nowFn().Unix(), !tracker.createdHere, "capture_started_at_close"); err != nil {
+			return "Failed to start transcript capture. Ticket left open."
 		}
 	}
+
+	autoClose.Lock()
+	if tracker.closing {
+		autoClose.Unlock()
+		return "Ticket is already closing."
+	}
+	tracker.closing = true
+	autoClose.Unlock()
 
 	closedBy := ""
 	if i.Member != nil && i.Member.User != nil {
 		closedBy = i.Member.User.ID
 	}
-	closedAt := time.Now().Unix()
-
-	content, totalAttachments, totalEmbeds, participants := buildTranscriptContent(messages)
-
-	payload := transcriptPayload{
-		TicketID: i.ChannelID,
-		Username: username,
-		UserID:   userID,
-		Messages: content,
-		Metadata: transcriptMetadata{
-			TicketOpenedAt:   time.Unix(openedAt, 0).UTC().Format(time.RFC3339),
-			TicketClosedAt:   time.Unix(closedAt, 0).UTC().Format(time.RFC3339),
-			ClosedBy:         transcriptClosedBy{ID: closedBy, Username: usernameOrID(s, i.GuildID, closedBy)},
-			TotalMessages:    len(content),
-			TotalAttachments: totalAttachments,
-			TotalEmbeds:      totalEmbeds,
-			Participants:     participants,
-		},
+	deleted, closeErr := closeTracker(tracker, "manual", closedBy)
+	if !deleted || closeErr != nil {
+		autoClose.Lock()
+		tracker.closing = false
+		autoClose.Unlock()
 	}
-
-	data, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("marshal transcript failed: %v", err)
-		return
+	if closeErr != nil {
+		if deleted {
+			return "Ticket closed, but transcript finalization will retry."
+		}
+		return "Failed to save transcript. Ticket left open; try again."
 	}
-
-	storageKey := fmt.Sprintf("transcripts/%d/%s/%d.json", serverID, i.ChannelID, closedAt)
-	if err := storageClient.UploadTranscript(context.Background(), storageKey, data); err != nil {
-		log.Printf("upload transcript failed: %v", err)
-		return
-	}
-
-	row, err := queries.CreateTranscript(context.Background(), db.CreateTranscriptParams{
-		ServerConfigID:   serverID,
-		TicketID:         pgtype.Text{String: i.ChannelID, Valid: true},
-		Username:         pgtype.Text{String: username, Valid: username != ""},
-		UserID:           pgtype.Text{String: userID, Valid: userID != ""},
-		OpenedAt:         openedAt,
-		ClosedAt:         closedAt,
-		ClosedBy:         closedBy,
-		StorageKey:       storageKey,
-		TotalMessages:    pgtype.Int4{Int32: int32(len(content)), Valid: true},
-		TotalAttachments: pgtype.Int4{Int32: int32(totalAttachments), Valid: true},
-		TotalEmbeds:      pgtype.Int4{Int32: int32(totalEmbeds), Valid: true},
-	})
-	if err != nil {
-		log.Printf("create transcript row failed: %v", err)
-		return
-	}
-
-	channelName := ""
-	if ch := getChannelFromInteraction(s, i); ch != nil {
-		channelName = ch.Name
-	} else {
-		channelName = i.ChannelID
-	}
-
-	SendTranscriptLog(
-		s,
-		serverConfig.TicketTranscriptCid.String,
-		serverID,
-		row.ID,
-		channelName,
-		userID,
-		closedBy,
-		len(content),
-		totalAttachments,
-	)
+	return ""
 }
