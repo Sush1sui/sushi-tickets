@@ -344,6 +344,87 @@ func TestSpoolWriteFailureBlocksClose(t *testing.T) {
 	}
 }
 
+func TestSpoolMetadataScanTracksResponseWithoutMessageCache(t *testing.T) {
+	resetAutoCloseForTest(t)
+	storageClient = storage.NewClientAt(t.TempDir())
+	now := time.Unix(1_700_000_000, 0)
+	if err := spoolStart(42, "ticket", "opener", now.Unix(), now.Unix(), false, ""); err != nil {
+		t.Fatal(err)
+	}
+	_ = spoolAppend(42, "ticket", spoolEvent{T: "m", Kind: "create", M: spoolMessageFromDiscord(&discordgo.Message{
+		ID: "100", Content: "human", Timestamp: now,
+		Author: &discordgo.User{ID: "staff", Username: "staff"},
+	}, "create")})
+	_ = spoolAppend(42, "ticket", spoolEvent{T: "d", ID: "100"})
+	_ = spoolAppend(42, "ticket", spoolEvent{T: "m", Kind: "create", M: spoolMessageFromDiscord(&discordgo.Message{
+		ID: "101", Content: "bot", Timestamp: now.Add(time.Minute),
+		Author: &discordgo.User{ID: "bot", Bot: true},
+	}, "create")})
+	if err := spoolFlush("ticket", true); err != nil {
+		t.Fatal(err)
+	}
+	meta, err := spoolScanMetadata(42, "ticket")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !meta.exists || !meta.responded {
+		t.Fatalf("metadata scan lost response evidence: %+v", meta)
+	}
+	if !meta.lastActivity.Equal(now.Add(time.Minute)) {
+		t.Fatalf("last activity = %s", meta.lastActivity)
+	}
+	if meta.gap {
+		t.Fatal("unexpected gap")
+	}
+	_ = spoolAppend(42, "ticket", spoolEvent{T: "g", TS: now.Unix(), Reason: "test"})
+	_ = spoolFlush("ticket", true)
+	meta, _ = spoolScanMetadata(42, "ticket")
+	if !meta.gap || !meta.uncertain {
+		t.Fatal("gap not marked uncertain")
+	}
+}
+
+func TestEvaluatorPerformsNoDiscordReads(t *testing.T) {
+	resetAutoCloseForTest(t)
+	database := &closeDB{transcriptCID: "logs"}
+	queries = db.New(database)
+	storageClient = storage.NewClientAt(t.TempDir())
+	session, _ := discordgo.New("Bot test")
+	var gets, deletes atomic.Int32
+	session.Client = &http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.Method {
+		case http.MethodGet:
+			gets.Add(1)
+		case http.MethodDelete:
+			deletes.Add(1)
+		}
+		return response(200, `{}`), nil
+	})}
+	now := nowFn()
+	tracker := &ticketTracker{
+		guildID: 42, openerID: "opener", channelID: "ticket",
+		createdAt: now.Add(-time.Hour), lastActivity: now.Add(-time.Hour),
+		observedSince: now.Add(-time.Hour), responseKnown: true, capture: true,
+	}
+	autoClose.Lock()
+	autoClose.session = session
+	autoClose.ready = true
+	autoClose.hydrated = true
+	autoClose.configs[42] = autoCloseSettings{active: true, inactivity: time.Minute}
+	autoClose.trackers["ticket"] = tracker
+	autoClose.Unlock()
+	if err := spoolStart(42, "ticket", "opener", tracker.createdAt.Unix(), tracker.createdAt.Unix(), false, ""); err != nil {
+		t.Fatal(err)
+	}
+	evaluateAutoClose()
+	if gets.Load() != 0 {
+		t.Fatalf("evaluator issued %d Discord reads", gets.Load())
+	}
+	if deletes.Load() == 0 {
+		t.Fatal("evaluator did not close an eligible ticket")
+	}
+}
+
 func TestLateEventsDuringDeletionAreFinalized(t *testing.T) {
 	resetAutoCloseForTest(t)
 	database := &closeDB{transcriptCID: "logs"}

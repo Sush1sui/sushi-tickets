@@ -260,8 +260,72 @@ func spoolExists(server int64, channel string) bool {
 	return err == nil
 }
 
-type spoolReplay struct {
+// spoolMetadata is a streaming summary for restart hydration. It deliberately
+// keeps no message bodies: full history is only materialized at close time.
+type spoolMetadata struct {
 	exists       bool
+	responded    bool
+	lastActivity time.Time
+	gap          bool
+	uncertain    bool
+	captureStart time.Time
+}
+
+func spoolScanMetadata(server int64, channel string) (spoolMetadata, error) {
+	path, err := spoolPath(server, channel)
+	if err != nil {
+		return spoolMetadata{}, err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return spoolMetadata{}, nil
+		}
+		return spoolMetadata{}, err
+	}
+	defer f.Close()
+
+	meta := spoolMetadata{exists: true}
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		var header spoolHeader
+		if err := json.Unmarshal(line, &header); err == nil && header.T == "h" {
+			meta.uncertain = header.Uncertain
+			meta.gap = header.Uncertain
+			if header.CaptureStart > 0 {
+				meta.captureStart = time.Unix(header.CaptureStart, 0)
+			}
+			continue
+		}
+		var ev spoolEvent
+		if err := json.Unmarshal(line, &ev); err != nil {
+			continue
+		}
+		switch ev.T {
+		case "m":
+			if ev.M == nil {
+				continue
+			}
+			if ev.M.Author.Bot == false && ev.M.Author.ID != "" {
+				meta.responded = true
+			}
+			if ev.M.Timestamp > 0 {
+				ts := time.UnixMilli(ev.M.Timestamp)
+				if ts.After(meta.lastActivity) {
+					meta.lastActivity = ts
+				}
+			}
+		case "g":
+			meta.gap = true
+			meta.uncertain = true
+		}
+	}
+	return meta, scanner.Err()
+}
+
+type spoolReplay struct {	exists       bool
 	header       spoolHeader
 	messages     []*discordgo.Message
 	responded    bool

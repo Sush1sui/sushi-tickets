@@ -286,12 +286,12 @@ func hydrateTicket(s *discordgo.Session, serverID int64, row db.ActiveTicketRow,
 	channelID := row.ChannelID
 	created := time.Unix(row.CreatedAt, 0)
 
-	replay, replayErr := spoolReplayTicket(serverID, channelID)
-	if replayErr != nil {
-		log.Printf("auto_close spool_replay channel=%s failed: %v", channelID, replayErr)
+	meta, metaErr := spoolScanMetadata(serverID, channelID)
+	if metaErr != nil {
+		log.Printf("auto_close spool_scan channel=%s failed: %v", channelID, metaErr)
 	}
 
-	responded := replay.responded
+	responded := meta.responded
 	if !responded {
 		responded = cachedHumanMessage(s, channelID)
 	}
@@ -312,8 +312,8 @@ func hydrateTicket(s *discordgo.Session, serverID int64, row db.ActiveTicketRow,
 				tracker.responseKnown = true
 			}
 		}
-		if replay.lastActivity.After(tracker.lastActivity) {
-			tracker.lastActivity = replay.lastActivity
+		if meta.lastActivity.After(tracker.lastActivity) {
+			tracker.lastActivity = meta.lastActivity
 		}
 	} else {
 		tracker = &ticketTracker{
@@ -321,19 +321,19 @@ func hydrateTicket(s *discordgo.Session, serverID int64, row db.ActiveTicketRow,
 			openerID:      row.UserID,
 			channelID:     channelID,
 			createdAt:     created,
-			lastActivity:  replay.lastActivity,
+			lastActivity:  meta.lastActivity,
 			responded:     responded,
 			responseKnown: responded,
 			observedSince: now,
 			uncertain:     true,
-			capture:       capture || replay.exists,
+			capture:       capture || meta.exists,
 		}
 		autoClose.trackers[channelID] = tracker
 	}
 	autoClose.Unlock()
 
 	if tracker.capture {
-		if !replay.exists {
+		if !meta.exists {
 			if err := spoolStart(serverID, channelID, tracker.openerID, row.CreatedAt, now.Unix(), true, "capture_resumed_after_restart"); err != nil {
 				log.Printf("auto_close spool_start channel=%s failed: %v", channelID, err)
 				return
