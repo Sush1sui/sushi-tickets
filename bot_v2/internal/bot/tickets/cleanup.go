@@ -29,20 +29,23 @@ func HandleChannelDelete(_ *discordgo.Session, event *discordgo.ChannelDelete) {
 
 		// Externally deleted channels cannot guarantee transcript-before-delete.
 		// Write a best-effort transcript from the local spool, then clean up.
-		if tracker.capture {
-			if _, err := persistTrackerTranscript(tracker, ""); err != nil {
-				log.Printf("external_delete transcript channel=%s failed: %v", event.ID, err)
-			}
+		marker := cleanupMarker{
+			Server: serverID, Channel: event.ID, Mode: "external", State: "pending",
+			Deleted: true, Opener: tracker.openerID, OpenedAt: tracker.createdAt.Unix(),
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if err := queries.DeleteActiveTicketByChannel(ctx, serverID, event.ID); err != nil {
-			log.Printf("active ticket cleanup guild=%s channel=%s: %v", event.GuildID, event.ID, err)
-		}
-		cancel()
-		spoolDelete(event.ID)
 		autoClose.Lock()
-		delete(autoClose.trackers, event.ID)
+		tracker.cleanup = &marker
 		autoClose.Unlock()
+		err := writeMarker(marker)
+		if err == nil {
+			err = finalizeDeletedTicket(tracker, marker, ^uint64(0))
+		}
+		if err != nil {
+			log.Printf("external_delete cleanup channel=%s failed: %v", event.ID, err)
+			autoClose.Lock()
+			tracker.closing = false
+			autoClose.Unlock()
+		}
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

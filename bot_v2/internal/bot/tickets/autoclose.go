@@ -49,6 +49,7 @@ type ticketTracker struct {
 	totalMessages int
 	totalAttach   int
 	totalEmbeds   int
+	cleanup       *cleanupMarker
 }
 
 var autoClose = struct {
@@ -303,6 +304,7 @@ func hydrateTicket(s *discordgo.Session, serverID int64, row db.ActiveTicketRow,
 			autoClose.Unlock()
 			return
 		}
+		tracker.capture = tracker.capture || capture || meta.exists
 		tracker.observedSince = now
 		tracker.uncertain = true
 		if !tracker.responded {
@@ -421,7 +423,7 @@ func HandleAutoCloseMessage(_ *discordgo.Session, event *discordgo.MessageCreate
 		if ts.IsZero() {
 			ts = nowFn()
 		}
-		if human && !tracker.closing {
+		if human {
 			tracker.responded = true
 			tracker.responseKnown = true
 			if ts.After(tracker.lastActivity) {
@@ -612,6 +614,7 @@ func dueReason(t *ticketTracker, cfg autoCloseSettings, now time.Time) string {
 }
 
 func evaluateAutoClose() {
+	retryDeletedTickets()
 	autoClose.Lock()
 	if !autoClose.ready || !autoClose.hydrated {
 		autoClose.Unlock()
@@ -620,7 +623,7 @@ func evaluateAutoClose() {
 	now := nowFn()
 	candidates := make([]*ticketTracker, 0)
 	for _, tracker := range autoClose.trackers {
-		if tracker.closing {
+		if tracker.closing || tracker.cleanup != nil {
 			continue
 		}
 		cfg, ok := autoClose.configs[tracker.guildID]
@@ -640,7 +643,7 @@ func evaluateAutoClose() {
 
 func attemptAutoClose(tracker *ticketTracker) {
 	autoClose.Lock()
-	if tracker.closing {
+	if tracker.closing || tracker.cleanup != nil {
 		autoClose.Unlock()
 		return
 	}
@@ -676,13 +679,12 @@ func autoCloseID() string {
 // closeTracker persists the configured transcript, writes recovery state,
 // deletes the channel, then finalizes the transcript with late events.
 func closeTracker(tracker *ticketTracker, mode, closedBy string) (bool, error) {
-	if spoolFailed(tracker.channelID) {
-		return false, errors.New("capture write failed")
-	}
-	if tracker.capture {
-		_ = spoolFlush(tracker.channelID, true)
-	}
 	seq := spoolSeq(tracker.channelID)
+	if tracker.capture {
+		if err := spoolFlush(tracker.channelID, true); err != nil {
+			return false, err
+		}
+	}
 	rowID, err := persistTrackerTranscript(tracker, closedBy)
 	if err != nil {
 		return false, err
@@ -722,51 +724,98 @@ func closeTracker(tracker *ticketTracker, mode, closedBy string) (bool, error) {
 		return false, err
 	}
 	marker.Deleted = true
-	if err := writeMarker(marker); err != nil {
-		log.Printf("auto_close marker_update channel=%s failed: %v", tracker.channelID, err)
-	}
-
-	// Finalize with any events observed during deletion. On failure the marker
-	// and spool stay for recovery. Capture remains active until the channel is gone.
-	for attempt := 0; attempt < 2; attempt++ {
-		if spoolSeq(tracker.channelID) == seq {
-			break
-		}
-		_ = spoolFlush(tracker.channelID, true)
-		rowID, err = persistTrackerTranscript(tracker, closedBy)
-		if err != nil {
-			return true, err
-		}
-		seq = spoolSeq(tracker.channelID)
-		marker.RowID = rowID
-	}
-	marker.State = "confirmed"
+	autoClose.Lock()
+	tracker.cleanup = &marker
+	autoClose.Unlock()
 	if err := writeMarker(marker); err != nil {
 		return true, err
 	}
-	if !marker.Logged {
-		sendTranscriptLog(tracker, closedBy, rowID)
-		marker.Logged = true
-		_ = writeMarker(marker)
-	}
-	cleanupConfirmed(marker)
-	return true, nil
+	return true, finalizeDeletedTicket(tracker, marker, seq)
 }
 
-func cleanupConfirmed(marker cleanupMarker) {
-	if queries != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := queries.DeleteActiveTicketByChannel(ctx, marker.Server, marker.Channel); err != nil {
-			log.Printf("auto_close row_cleanup channel=%s failed: %v", marker.Channel, err)
-			return
+func finalizeDeletedTicket(tracker *ticketTracker, marker cleanupMarker, seq uint64) error {
+	// Finalize with any events observed during deletion. On failure the marker
+	// and spool stay for recovery. Capture remains active until the channel is gone.
+	for attempt := 0; attempt < 2; attempt++ {
+		current := spoolSeq(tracker.channelID)
+		if current == seq {
+			break
 		}
+		if err := spoolFlush(tracker.channelID, true); err != nil {
+			return err
+		}
+		rowID, err := persistTrackerTranscript(tracker, marker.ClosedBy)
+		if err != nil {
+			return err
+		}
+		seq = current
+		marker.RowID = rowID
+	}
+	if spoolSeq(tracker.channelID) != seq {
+		return errors.New("transcript still receiving events; finalization pending")
+	}
+	marker.State = "confirmed"
+	if err := writeMarker(marker); err != nil {
+		return err
+	}
+	if !marker.Logged {
+		sendTranscriptLog(tracker, marker.ClosedBy, marker.RowID)
+		marker.Logged = true
+		if err := writeMarker(marker); err != nil {
+			return err
+		}
+	}
+	autoClose.Lock()
+	tracker.cleanup = &marker
+	autoClose.Unlock()
+	return cleanupConfirmed(marker)
+}
+
+func cleanupConfirmed(marker cleanupMarker) error {
+	if queries == nil {
+		return errors.New("database unavailable")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := queries.DeleteActiveTicketByChannel(ctx, marker.Server, marker.Channel); err != nil {
+		log.Printf("auto_close row_cleanup channel=%s failed: %v", marker.Channel, err)
+		return err
 	}
 	spoolDelete(marker.Channel)
 	deleteMarker(marker.Server, marker.Channel)
 	autoClose.Lock()
 	delete(autoClose.trackers, marker.Channel)
 	autoClose.Unlock()
+	return nil
+}
+
+// Retry only known deletions; live tickets still use the normal eligibility checks.
+// The in-memory scan avoids reading marker files on idle ticks.
+func retryDeletedTickets() {
+	autoClose.Lock()
+	var pending []*ticketTracker
+	for _, tracker := range autoClose.trackers {
+		if tracker.cleanup != nil && !tracker.closing {
+			tracker.closing = true
+			pending = append(pending, tracker)
+		}
+	}
+	autoClose.Unlock()
+	for _, tracker := range pending {
+		marker := *tracker.cleanup
+		var err error
+		if marker.State == "confirmed" {
+			err = cleanupConfirmed(marker)
+		} else {
+			err = finalizeDeletedTicket(tracker, marker, ^uint64(0))
+		}
+		if err != nil {
+			log.Printf("ticket cleanup channel=%s failed: %v", tracker.channelID, err)
+			autoClose.Lock()
+			tracker.closing = false
+			autoClose.Unlock()
+		}
+	}
 }
 
 func persistTrackerTranscript(tracker *ticketTracker, closedBy string) (int32, error) {
@@ -928,21 +977,13 @@ func recoverCleanupMarkers(s *discordgo.Session) {
 	}
 	for _, marker := range markers {
 		switch {
-		case marker.State == "confirmed":
-			cleanupConfirmed(marker)
-		case marker.Deleted:
+		case marker.State == "confirmed" || marker.Deleted:
 			tracker := trackerForMarker(marker)
-			if _, err := persistTrackerTranscript(tracker, marker.ClosedBy); err != nil {
-				continue
+			autoClose.Lock()
+			if !tracker.closing {
+				tracker.cleanup = &marker
 			}
-			marker.State = "confirmed"
-			_ = writeMarker(marker)
-			if !marker.Logged {
-				sendTranscriptLog(tracker, marker.ClosedBy, marker.RowID)
-				marker.Logged = true
-				_ = writeMarker(marker)
-			}
-			cleanupConfirmed(marker)
+			autoClose.Unlock()
 		case marker.Mode == "auto":
 			tracker := getTracker(marker.Channel)
 			if tracker == nil {
@@ -957,15 +998,24 @@ func recoverCleanupMarkers(s *discordgo.Session) {
 				deleteMarker(marker.Server, marker.Channel)
 				continue
 			}
+			autoClose.Lock()
+			if tracker.closing || tracker.cleanup != nil {
+				autoClose.Unlock()
+				continue
+			}
 			tracker.closing = true
+			autoClose.Unlock()
 			if deleted, err := closeTracker(tracker, "auto", marker.ClosedBy); !deleted || err != nil {
+				autoClose.Lock()
 				tracker.closing = false
+				autoClose.Unlock()
 			}
 		default:
 			// Manual and external pending markers are never executed on recovery.
 			deleteMarker(marker.Server, marker.Channel)
 		}
 	}
+	retryDeletedTickets()
 }
 
 func trackerForMarker(marker cleanupMarker) *ticketTracker {

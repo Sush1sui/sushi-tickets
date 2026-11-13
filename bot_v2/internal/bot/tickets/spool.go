@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,6 +62,7 @@ type spoolEvent struct {
 }
 
 type spoolState struct {
+	flushMu sync.Mutex
 	path    string
 	server  int64
 	buffer  [][]byte
@@ -152,9 +154,6 @@ func spoolAppend(server int64, channel string, event spoolEvent) error {
 		st = &spoolState{path: path, server: server}
 		spools.m[channel] = st
 	}
-	if st.failed != nil {
-		return st.failed
-	}
 	st.buffer = append(st.buffer, append(line, '\n'))
 	st.seq++
 	st.dirty = true
@@ -163,10 +162,17 @@ func spoolAppend(server int64, channel string, event spoolEvent) error {
 
 // spoolFlush writes buffered events. Sync is used only at close time so the
 // transcript reads durable bytes before the channel is deleted.
-func spoolFlush(channel string, syncWrite bool) error {
+func spoolFlush(channel string, syncWrite bool) (flushErr error) {
 	spools.Lock()
 	st, ok := spools.m[channel]
-	if !ok || len(st.buffer) == 0 {
+	spools.Unlock()
+	if !ok {
+		return nil
+	}
+	st.flushMu.Lock()
+	defer st.flushMu.Unlock()
+	spools.Lock()
+	if spools.m[channel] != st || (!syncWrite && len(st.buffer) == 0 && st.failed == nil) {
 		spools.Unlock()
 		return nil
 	}
@@ -175,35 +181,40 @@ func spoolFlush(channel string, syncWrite bool) error {
 	st.dirty = false
 	path := st.path
 	spools.Unlock()
+	defer func() {
+		spools.Lock()
+		defer spools.Unlock()
+		// Keep the unwritten suffix ahead of events received during this flush.
+		st.buffer = append(lines, st.buffer...)
+		st.failed = flushErr
+		st.dirty = len(st.buffer) > 0 || flushErr != nil
+	}()
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		spools.Lock()
-		st.failed = err
-		spools.Unlock()
 		return err
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
-		spools.Lock()
-		st.failed = err
-		spools.Unlock()
 		return err
 	}
-	for _, line := range lines {
-		if _, err := f.Write(line); err != nil {
+	for len(lines) > 0 {
+		n, err := f.Write(lines[0])
+		if n == len(lines[0]) {
+			lines = lines[1:]
+		} else {
+			lines[0] = lines[0][n:]
+			if err == nil {
+				err = io.ErrShortWrite
+			}
+		}
+		if err != nil {
 			f.Close()
-			spools.Lock()
-			st.failed = err
-			spools.Unlock()
 			return err
 		}
 	}
 	if syncWrite {
 		if err := f.Sync(); err != nil {
 			f.Close()
-			spools.Lock()
-			st.failed = err
-			spools.Unlock()
 			return err
 		}
 	}
@@ -244,11 +255,16 @@ func dirtySpoolChannels() []string {
 func spoolDelete(channel string) {
 	spools.Lock()
 	st := spools.m[channel]
+	spools.Unlock()
+	if st == nil {
+		return
+	}
+	st.flushMu.Lock()
+	defer st.flushMu.Unlock()
+	spools.Lock()
 	delete(spools.m, channel)
 	spools.Unlock()
-	if st != nil {
-		_ = os.Remove(st.path)
-	}
+	_ = os.Remove(st.path)
 }
 
 func spoolExists(server int64, channel string) bool {
@@ -325,7 +341,8 @@ func spoolScanMetadata(server int64, channel string) (spoolMetadata, error) {
 	return meta, scanner.Err()
 }
 
-type spoolReplay struct {	exists       bool
+type spoolReplay struct {
+	exists       bool
 	header       spoolHeader
 	messages     []*discordgo.Message
 	responded    bool
@@ -336,6 +353,14 @@ type spoolReplay struct {	exists       bool
 }
 
 func spoolReplayTicket(server int64, channel string) (spoolReplay, error) {
+	spools.Lock()
+	st := spools.m[channel]
+	spools.Unlock()
+	if st != nil {
+		// Replay must not read a partially written event from a concurrent flush.
+		st.flushMu.Lock()
+		defer st.flushMu.Unlock()
+	}
 	path, err := spoolPath(server, channel)
 	if err != nil {
 		return spoolReplay{}, err
@@ -538,17 +563,17 @@ func spoolMessageFromDiscord(m *discordgo.Message, kind string) *spoolMessage {
 
 // cleanupMarker is local recovery state, not database schema.
 type cleanupMarker struct {
-	Server     int64  `json:"server"`
-	Channel    string `json:"channel"`
-	Mode       string `json:"mode"`
-	State      string `json:"state"`
-	Deleted    bool   `json:"deleted"`
-	RowID      int32  `json:"row_id,omitempty"`
-	Logged     bool   `json:"logged,omitempty"`
-	ClosedBy   string `json:"closed_by,omitempty"`
-	Opener     string `json:"opener,omitempty"`
-	OpenedAt   int64  `json:"opened_at"`
-	UpdatedAt  int64  `json:"updated_at"`
+	Server    int64  `json:"server"`
+	Channel   string `json:"channel"`
+	Mode      string `json:"mode"`
+	State     string `json:"state"`
+	Deleted   bool   `json:"deleted"`
+	RowID     int32  `json:"row_id,omitempty"`
+	Logged    bool   `json:"logged,omitempty"`
+	ClosedBy  string `json:"closed_by,omitempty"`
+	Opener    string `json:"opener,omitempty"`
+	OpenedAt  int64  `json:"opened_at"`
+	UpdatedAt int64  `json:"updated_at"`
 }
 
 func markerPath(server int64, channel string) (string, error) {
